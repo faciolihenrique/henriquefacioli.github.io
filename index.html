@@ -1,23 +1,20 @@
----
-layout: default
----
-
-<div class="home">
-
-  <h1 class="page-heading">Posts</h1>
-
-  <ul class="post-list">
-    {% for post in site.posts %}
-      <li>
-        <span class="post-meta">{{ post.date | date: "%b %-d, %Y" }}</span>
-
-        <h2>
-          <a class="post-link" href="{{ post.url | prepend: site.baseurl }}">{{ post.title }}</a>
-        </h2>
-      </li>
-    {% endfor %}
-  </ul>
-
-  <p class="rss-subscribe">subscribe <a href="{{ "/feed.xml" | prepend: site.baseurl }}">via RSS</a></p>
-
-</div>
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width">
+	<meta name="author" content="@henriquefacioli">
+	<meta name="description" content="a personal website for sharing things i like and posting my experince">
+	<meta property="og:title" content="henrique's unicorn">
+	<meta property="og:description" content="a personal website for sharing things i like and posting my experince">
+	<meta name="twitter:card" content="summary">
+	<meta name="twitter:title" content="henrique's unicorn">
+	<meta name="twitter:description" content="a personal website for sharing things i like and posting my experince">
+	<meta name="twitter:creator" content="@henriquefacioli">
+	<title>henrique's unicorn</title>
+	<style type="text/css">body {font-size: 1.1em; line-height: 1.5em; max-width: 45em; margin: auto; padding: 0 2%;} img {max-width: 100%; display: block; margin: .75em auto;}</style>
+</head>
+<body>
+<h2>henrique's unicorn</h2> <p>Welcome to my personal website! Here I pretend to post some information about myself, my computer discoveries, development and anything i want. I own this page, so I do whatever I want. maybe. not. definitely not. Ok</p> <p>Maybe it stays this empty forever, just beacause it's mine. That's what I want or maybe i'm just to shy to post.</p> <p>find me on <a href="twitter.com/henriquefacioli">@henriquefacioli</a></p>
+</body>
+</html>
