@@ -1,0 +1,26 @@
+body {
+    font-size: 1.1em;
+    line-height: 1.5em;
+    max-width: 45em;
+    margin: auto;
+    padding: 0 2%;
+}
+
+img {
+    max-width: 100%;
+    display: block;
+    margin: .75em auto;
+}
+
+footer {
+    border-top: 1px solid #d5d5d5;
+    font-size: .8em;
+}
+nav ul, footer ul {
+    padding: 0px;
+    list-style: none;
+}
+nav ul li, footer ul li {
+    display: inline;
+    margin-right: 20px;
+}
