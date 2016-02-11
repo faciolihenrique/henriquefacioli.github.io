@@ -3,13 +3,15 @@
 <head>
 	<meta charset="utf-8">
 	<title>{{ page.title }}</title>
-	<meta name="author" content="@henriquefacioli">
+	<meta name="author" content="{{ page.author }}">
 	<meta name="description" content="a personal website for sharing things i like and posting my experince">
 	<!-- favicon -->
 	<link rel="shortcut icon" type="image/png" href="/img/unicorn.ico"/>
 	<link rel="shortcut icon" type="image/png" href="/img/unicorn.ico"/>
 	<!-- main stylesheet -->
 	<link rel="stylesheet" type="text/css" href="/css/main.css">
+	<!-- Google analytics -->
+	{% include analytics.html %}
 
 	<meta name="viewport" content="width=device-width">
 	<meta property="og:title" content="{{ page.title }}">
@@ -21,12 +23,14 @@
 </head>
 <body>
 <h1>{{ page.title }}</h1>
+
 <nav>
     <ul>
     	<li><a href="/">home</a></li>
     	<li><a href="/blog">blog</a></li>
     </ul>
 </nav>
+
 <div>
 {{ content }}
 </div>
