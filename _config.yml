@@ -1,2 +1,3 @@
 name: Henrique Noronha Facioli, @henriquefacioli
 markdown: kramdown
+permalink: /blog/:year/:month/:day/:title
