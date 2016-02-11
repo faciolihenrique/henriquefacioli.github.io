@@ -12,7 +12,6 @@ layout: default
     {{ content }}
 </div>
 <hr>
-{% include disqus.html %}
-
-
-<script id="dsq-count-scr" src="//henrqueme.disqus.com/count.js" async></script>
+{% if page.comments %}
+    {% include disqus.html %}
+{% endif %}
