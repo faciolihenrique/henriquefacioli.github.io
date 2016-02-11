@@ -6,11 +6,11 @@
      */
 
     var disqus_config = function () {
-        this.page.url = "henrque.me/{{ post.url }}";
-        this.page.identifier = "{{ post.postName }}";
+        this.page.url = "henrque.me/{{ page.url }}";
+        this.page.identifier = "{{ page.postName }}";
     };
 
-    (function() {  // DON'T EDIT BELOW THIS LINE
+    (function() {
         var d = document, s = d.createElement('script');
 
         s.src = '//henrqueme.disqus.com/embed.js';
@@ -19,4 +19,4 @@
         (d.head || d.body).appendChild(s);
     })();
 </script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments</a></noscript>
