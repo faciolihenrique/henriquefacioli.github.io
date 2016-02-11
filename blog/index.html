@@ -3,8 +3,9 @@ layout: default
 title: henrique's unicorn
 ---
 	<ul class="posts">
-
 	  {% for post in site.posts %}
-	    <li><span>{{ post.date | date_to_string }}</span> » <a href="{{ post.url }}" title="{{ post.title }}">{{ post.postName }}</a></li>
+
+	    <li><a href="{{ post.url }}" title="{{ post.title }}">{{ post.postName }}</a> - published {{ post.date | date_to_string }}</span></li>
+
 	  {% endfor %}
 	</ul>
