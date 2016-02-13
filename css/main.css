@@ -2,8 +2,50 @@ body {
     font-size: 1.1em;
     line-height: 1.5em;
     max-width: 45em;
-    margin: auto;
+    margin:20px auto;
     padding: 0 2%;
+    text-shadow: 0 1px 0 #ffffff;
+    background: #f2f2f2;
+    color: #444444;
+}
+
+
+footer {
+    border-top: 1px solid #d5d5d5;
+    font-size: .8em;
+}
+footer li a {
+    color: #444444;
+    display: inline;
+}
+nav ul, footer ul {
+    padding: 0px;
+    list-style: none;
+}
+nav ul li, footer ul li {
+    display: inline;
+    margin-right: 20px;
+}
+
+p {
+    text-indent: 1em;
+    text-align: justify;
+}
+
+a {
+    color: #444444;
+}
+
+img {
+    border: 0;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: .75em auto;
+}
+
+code {
+    background: white;
 }
 
 nav li a{
@@ -12,34 +54,4 @@ nav li a{
     color: #000;
     text-decoration: underline;;
     display: inline;
-}
-
-img {
-    max-width: 100%;
-    display: block;
-    margin: .75em auto;
-}
-
-footer {
-    border-top: 1px solid #d5d5d5;
-    font-size: .8em;
-}
-nav ul, footer ul {
-    padding: 0px;
-    list-style: none;
-}
-
-nav ul li, footer ul li {
-    display: inline;
-    margin-right: 20px;
-}
-
-footer li a {
-    color: #000;
-    display: inline;
-}
-
-p {
-    text-indent: 1em;
-    text-align: justify;
 }
