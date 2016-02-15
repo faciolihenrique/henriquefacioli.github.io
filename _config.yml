@@ -1,3 +1,12 @@
-name: Henrique Noronha Facioli, @henriquefacioli
+title: henrique me
+author: Henrique Noronha Facioli
+url: "http://henrique.me"
+description: "a website meant to be mine. here you can find a little about so many things. take a look."
+baseurl: ""
+mail: henrique.fac<span style="display:none">hello</span>ioli@gmail.com
+pgp: "0xEA1C7E63"
+twitter_username: henriquefacioli
+github_username: henriquefacioli
 markdown: kramdown
 permalink: /blog/:year/:month/:day/:title
+highlighter: pygments
