@@ -3,26 +3,27 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width">
-	<title>{{ page.title }}</title>
-	<meta name="author" content="{{ page.author }}">
-	<meta name="description" content="a personal website for sharing things i like and posting my experince">
+
+	<title>{{ site.title }}</title>
+	<meta name="author" content="{{ site.author }}">
+	<meta name="description" content="{{ site.description }}">
 	<!-- favicon -->
 	<link rel="shortcut icon" type="image/png" href="/img/unicorn.ico"/>
 	<link rel="shortcut icon" type="image/png" href="/img/unicorn.ico"/>
 	<!-- main stylesheet -->
 	<link rel="stylesheet" type="text/css" href="/css/main.css">
-	<!-- Google analytics -->
-	{% include analytics.html %}
-
+	<link rel="stylesheet" type="text/css" href="/css/syntax.css">
 	<!-- Og and twitter -->
 	<meta property="og:title" content="{{ page.title }}">
 	<meta property="og:description" content="a personal website for sharing things i like and posting my experince">
 	<meta property="og:image" content="henrique.me/img/unicorn.ico">
 	<meta property="og:url" content='http://henrique.me{{ page.url }}'
-
-	<meta name="twitter:creator" content="@henriquefacioli">
+	<meta name="twitter:creator" content="@{{site.twitter_username}}">
 	<meta name="twitter:card" content="summary">
 	<meta name="twitter:title" content="{{ page.title }}">
+
+	<!-- Google analytics -->
+	{% include analytics.html %}
 
 </head>
 <body>
@@ -46,18 +47,21 @@
 	</p>
     <ul>
 		<li>
-			henrique.fac<span style="display:none">hello</span>ioli@gmail.com
+			{{ site.mail }}
 		</li>
 		<li>
-			0xEA1C7E63
+			{{ site.pgp }}
 		</li>
 		<li>
-			<a target="_blank" href="http://twitter.com/henriquefacioli">@henriquefacioli</a>
+			<a target="_blank" href="http://twitter.com/{{ site.twitter_username }}">@{{site.twitter_username }}</a>
 		</li>
         <li>
-			<a href="https://github.com/henriquefacioli">github</a>
+			<a href="https://github.com/{{ site.github_username}}">github</a>
 		</li>
 	</ul>
+	<div style="float: right;">
+	<a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Licença Creative Commons" style="" src="https://i.creativecommons.org/l/by-sa/4.0/80x15.png" /></a>
+	</div>
 </footer>
 
 </html>
