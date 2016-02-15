@@ -10,11 +10,15 @@ since 2009 i've been using mac and had forgotten how nice it is to have headache
 
 i bough a dell vostro 5480 and decided to install arch on it. follow the wiki and everything worked. not the way i wanted, but working. so, i'm on my way to get things work properly as i want. and things i did and worked i'm going to write in here.
 
+i'm using arch-linux with gnome 3.18 installed on it
+
 ### problem on the Mousepad
 as i used a mac for about 5 years, when i touched my new notebook mousepad, it felt like a lack of sensitivity. the size was great, but sensitivity meh. :/
 googling it, i discover that was a configuration fault, and not a mousepad.
 
 after some googling, i've found ways to configure it properly. it's not an awesome configuration, but it's quite nice for me.
+
+as aways, [arch wiki is awesome](https://wiki.archlinux.org/index.php/Touchpad_Synaptics#Using_xinput_to_determine_touchpad_capabilities)
 
 ### how
 first i needed to install synaptics. on arch, using pacman:
@@ -78,7 +82,9 @@ Section "InputClass"
 
 {% endhighlight %}
 
-i've googled a little, and used synaptics references:
+i've googled a little, and used synaptics references. Got any doubt?
 {% highlight bash %}
 $ man 4 synaptics
 {% endhighlight %}
+
+it would be very nice receiving your synaptics configuration :)
