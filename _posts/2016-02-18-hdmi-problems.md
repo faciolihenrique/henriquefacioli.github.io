@@ -18,7 +18,12 @@ __if you don't have pulseaudio, go [HERE](https://wiki.archlinux.org/index.php/P
 4. add the following lines on it. check if they are not set before (they should be comment with an ' __;__ ').
 
 {% highlight bash %}
-resample-method = ffmpeg
+default-sample-rate = 48000
+alternate-sample-rate = 192000
+default-sample-channels = 3 ; my computer configuration is 2 speakers + sub
+
+resample-method = src-sinc-best-quality
 enable-remixing = yes
+
 flat-volumes = no
 {% endhighlight %}
