@@ -2,7 +2,7 @@
 layout: post
 title: henrique's unicorn
 postName: "Archdiary - HDMI problem"
-date: 2016-02-16
+date: 2016-02-18
 comments: true
 ---
 
