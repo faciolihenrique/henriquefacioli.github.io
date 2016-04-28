@@ -1,0 +1,17 @@
+---
+layout: default
+---
+<h2>{{ page.postName }}</h2>
+
+
+<div>
+Ultima atualização : {{ page.date | date_to_string }}
+</div>
+<hr>
+<div class="post">
+    {{ content }}
+</div>
+<hr>
+{% if page.comments %}
+    {% include disqus.html %}
+{% endif %}

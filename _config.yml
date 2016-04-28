@@ -9,4 +9,5 @@ twitter_username: henriquefacioli
 github_username: henriquefacioli
 markdown: kramdown
 permalink: /blog/:year/:month/:day/:title
-highlighter: pygments
+highlighter: rouge
+paginate: 5
