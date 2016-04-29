@@ -18,7 +18,7 @@ googling it, i discover that was a configuration fault, and not a mousepad.
 
 after some googling, i've found ways to configure it properly. it's not an awesome configuration, but it's quite nice for me.
 
-as aways, [arch wiki is awesome](https://wiki.archlinux.org/index.php/Touchpad_Synaptics#Using_xinput_to_determine_touchpad_capabilities)
+as always, [arch wiki is awesome](https://wiki.archlinux.org/index.php/Touchpad_Synaptics#Using_xinput_to_determine_touchpad_capabilities)
 
 ### how
 first i needed to install synaptics. on arch, using pacman:

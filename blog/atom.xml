@@ -10,7 +10,7 @@ layout: null
 	<updated>{{ site.time | date_to_xmlschema }}</updated>
 	<id>http://henrique.me/blog</id>
 	<author>
-		<name>Hank Quinlan</name>
+		<name>Henrique</name>
 		<email>henrique dot facioli @ gmail dot com/email>
 	</author>
 
