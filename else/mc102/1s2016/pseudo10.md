@@ -4,7 +4,7 @@ title: henrique - o resto
 postName: "Laboratório 10 - ASCII Art"
 anterior: ../
 ---
-{% highlight bash %}
+{% highlight bash linenos%}
     leia o número de letras
     leia o tamanho da matriz
     inicialize a matriz

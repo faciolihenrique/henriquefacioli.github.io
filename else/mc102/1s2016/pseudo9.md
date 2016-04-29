@@ -4,7 +4,7 @@ title: henrique - o resto
 postName: "Laboratório 9 - Código da Vinci"
 anterior: ../
 ---
-{% highlight bash %}
+{% highlight bash linenos%}
     leia o número de linhas que será passado
     loop ( enquanto existe linha para ler ){
         leia a linha

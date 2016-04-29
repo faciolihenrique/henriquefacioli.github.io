@@ -4,7 +4,7 @@ title: henrique - o resto
 postName: "Laboratório 11 - Batalha Naval"
 anterior: ../
 ---
-{% highlight bash %}
+{% highlight bash linenos%}
     leia o número de navios que serão fornecidos
     leia o tamanho do tabuleiro (matriz)
 
@@ -22,11 +22,15 @@ anterior: ../
     loop (enquanto não destruir todos os navios de um dos dois){
         leia a posição de ataque
         se(jogador 1){
-            aplique o ataque na posição do tabuleiro do oponente
+            (aplique o ataque na posição do tabuleiro do oponente):
+            se acertou
+                remova o navio do tabuleiro
             imprima o caso
         }
-        se(jogador 2){
-            aplique o ataque na posição do tabuleiro do oponente
+        ou, se(jogador 2){
+            (aplique o ataque na posição do tabuleiro do oponente):
+            se acertou
+                remova o navio do tabuleiro
             imprima o caso
         }
 
