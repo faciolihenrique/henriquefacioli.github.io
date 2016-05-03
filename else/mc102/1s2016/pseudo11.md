@@ -41,6 +41,8 @@ anterior: ../
         - São nescessários dois tabuleiros!
         - Utilize matrizes e as inicialize com um valor para sinalizar o mar.
         Ex: 0 sinaliza agua.
+        - Uma leitura do valor "0,1" pode ser feita scanf("%d,%d",var1,var2);En-
+        tenda que o caracter ',' pode ser substituido por qualquer outro.
         - Ao indicar a posição que contem um navio, utilize símbolos
         (caracteres/numeros) diferentes para cada embarcação.
         Ex: primeira embarcação = 1 , segunda embarcação = 2 ...
