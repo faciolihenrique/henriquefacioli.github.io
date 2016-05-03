@@ -4,9 +4,9 @@ title: henrique - o resto
 postName: "Laboratório 12 - Conjuntos"
 anterior: ../
 ---
-{% highlight c linenos%}
-    **Não visto ainda**
+**Não feito por mim ainda**
 
+{% highlight b linenos%}
     neste laboratório não será necessário "perder tempo" no main do programa.
     nele, o principal ponto são as funções.
 
