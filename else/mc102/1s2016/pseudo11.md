@@ -1,13 +1,13 @@
 ---
 layout: code
 title: henrique - o resto
-postName: "Laboratório 11 - Batalha Naval"
+postName:   <a href="https://susy.ic.unicamp.br:9999/mc102ij/11/enunc.html">Laboratório 11 - Batalha Naval</a>
 anterior: ../
 ---
 {% highlight bash linenos%}
     leia o número de navios que serão fornecidos
     leia o tamanho do tabuleiro (matriz)
-
+''
     loop (enquanto houver embarcações do jogador 1 para serem alocadas){
         leia a posição de inicio do navio
         leia o tamanho do navio

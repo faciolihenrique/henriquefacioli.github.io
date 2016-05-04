@@ -1,7 +1,7 @@
 ---
 layout: code
 title: henrique - o resto
-postName: "Laboratório 10 - ASCII Art"
+postName: <a href="https://susy.ic.unicamp.br:9999/mc102ij/10/enunc.html">Laboratório 10 - ASCII Art</a>
 anterior: ../
 ---
 {% highlight bash linenos%}
