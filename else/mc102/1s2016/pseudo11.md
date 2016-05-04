@@ -4,10 +4,10 @@ title: henrique - o resto
 postName:   <a href="https://susy.ic.unicamp.br:9999/mc102ij/11/enunc.html">Laboratório 11 - Batalha Naval</a>
 anterior: ../
 ---
-{% highlight bash linenos%}
+{% highlight b linenos%}
     leia o número de navios que serão fornecidos
     leia o tamanho do tabuleiro (matriz)
-''
+
     loop (enquanto houver embarcações do jogador 1 para serem alocadas){
         leia a posição de inicio do navio
         leia o tamanho do navio
@@ -38,7 +38,7 @@ anterior: ../
     }
 
     Dicas:
-        - São nescessários dois tabuleiros!
+        - São necessários dois tabuleiros!
         - Utilize matrizes e as inicialize com um valor para sinalizar o mar.
         Ex: 0 sinaliza agua.
         - Uma leitura do valor "0,1" pode ser feita scanf("%d,%d",var1,var2);En-

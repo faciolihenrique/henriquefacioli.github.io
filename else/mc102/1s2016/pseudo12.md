@@ -13,17 +13,51 @@ Como rodar o programa:
   <code>gcc lab12.c lab12_main.c -o lab12</code>
   5. Para rodar o executável, rode <code>./lab12</code>
 
-**Não feito por mim ainda**
+**Em andamento**
 
-{% highlight b linenos%}
-    pertence:
+{% highlight bash linenos%}
+    pertence{
+      loop (percorrendo o vetor até o fim){
+        se o num estiver dentro do vetor{
+          retorna 1
+        }
+      }
+      retorna 0
+    }
 
-    contido:
+    contido{
+      loop (percorre todos os valores do conjunto1){
+        loop (enquanto não achar o valor atual do conjunto1 em conjunto2)  {
+        }
+        se percorreu todo o conjunto2{
+            retorna 0
+        }
+      }
+      ## Se chegou até aqui, significa que nenhuma vez ele percorreu todo o con-
+      ## junto 2 inteiro, ou seja, ele encontrou todo elemento do conj1 no conj2
+      retorna 1
+    }
 
-    adicao:
+    adicao{
+      loop (percorre todo o conjunto){
+          se encontrou o valor no conjunto{
+            retorna num;
+          }
+      }
+      ## Se chegou até aqui, significa que não encontrou o valor no vetor ##
+      adiciona o valor no vetor
+      retorna num+1;
+    }
 
-    subtracao:
-
+    subtracao{
+      loop (percorre todo o conjunto){
+          se encontrou o valor no conjunto{
+            remove ele do vetor;
+            retorna num-1;
+          }
+      }
+      retorna num;
+    }
     uniao:
 
     intersecao:
