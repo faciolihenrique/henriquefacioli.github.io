@@ -10,7 +10,7 @@ anterior: ../
 {% highlight bash linenos%}
     pertence{
       loop (percorrendo o vetor até o fim){
-        se num estiver dentro do vetor{
+        se (o numero estiver dentro do vetor){
           retorna 1
         }
       }
@@ -19,11 +19,14 @@ anterior: ../
 
     contido{
       loop (percorre todos os valores do conjunto1){
-        loop (enquanto não achar o valor atual do conjunto1 em conjunto2);
+        loop (enquanto não achar o valor atual do conjunto1 em conjunto2){
+            ## Esse loop só percorre o vetor inteiro, procurando elemento igual.
+            ## Se achar, ele sai do loop
+        }
         ## Se voce saiu do loop antes de terminar, significa que o elemento está
         ## dentro do conjunto. Se voce foi até o fim, significa que o elemento
         ## não está dentro, e então, conjunto 2 não está contido no conjunto 1
-        se percorreu todo o conjunto2{
+        se (não percorreu todo o conjunto2){
             retorna 0
         }
       }
@@ -33,24 +36,28 @@ anterior: ../
     }
 
     adicao{
+      ## Você pode , ao invez de faze o loop abaixo, utilizar sua função pertce
+      ## para ver se o número pertence ao conjunto, se sim, retorna tamanho, se
+      ## não adiciona o valor no vetor. :)
       loop (percorre todo o conjunto){
           se encontrou o valor no conjunto{
-            retorna num;
+            retorna tamanho;
           }
       }
       ## Se chegou até aqui, significa que não encontrou o valor no vetor ##
       adiciona o valor no vetor
-      retorna num+1;
+      retorna tamanho+1;
     }
 
     subtracao{
+      ## assim como na adição, aqui voce pode usar a função pertence novamente.
       loop (percorre todo o conjunto){
           se encontrou o valor no conjunto{
             remove ele do vetor;
-            retorna num-1;
+            retorna tamanho-1;
           }
       }
-      retorna num;
+      retorna tamanho;
     }
 
     uniao{
@@ -82,7 +89,7 @@ anterior: ../
     }
 
     diferenca{
-
+        # estou sem tempo para fazer essa como pseudocógido, sorry <3
     }
 
 {% endhighlight %}
