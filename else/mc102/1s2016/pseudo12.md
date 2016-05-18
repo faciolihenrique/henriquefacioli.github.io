@@ -5,8 +5,6 @@ postName: <a href="https://susy.ic.unicamp.br:9999/mc102ij/12/enunc.html">Labora
 anterior: ../
 ---
 
-### Em andamento
-
 {% highlight bash linenos%}
     pertence{
       loop (percorrendo o vetor até o fim){
