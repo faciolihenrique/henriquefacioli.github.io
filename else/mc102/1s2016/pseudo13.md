@@ -85,7 +85,7 @@ anterior: ../
 #### Compilando:
 1. Crie um diretório (pasta) para o laboratorio 13. Por exemplo, criarei uma pasta em Documentos com o nome lab13
 2. Faça o download dos dois arquivos [lab13.c](https://susy.ic.unicamp.br:9999/mc102ij/13/aux/lab13.c) e [lab13_main.c](https://susy.ic.unicamp.br:9999/mc102ij/13/aux/lab13_main.c) deixando os dois dentro do diretório que voce criou para o laboratório 13
-3. Nesse laboratório, o unico arquivo que você deverá editar é o lab12.c
+3. Nesse laboratório, o unico arquivo que você deverá editar é o lab13.c
 4. Para compilar esse laboratório, abra o terminal e navegue até o diretório (utilizando o comando 'cd' Ex. <code>cd Documents/lab13</code>). Quando estiver dentro do diretório, rode o seguinte código:
 <code>gcc lab13.c lab13_main.c -o lab13</code>
 5. Para rodar o executável, rode <code>./lab13</code>
