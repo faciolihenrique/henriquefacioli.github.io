@@ -38,8 +38,14 @@ anterior: ../
              enquanto s1[posicao atual + cont] = s2[cont]{
                 incrementa o contador
              }
-             se percorreu a s2 inteira E s1[posicao atual + cont] for final de palavra{
+             se percorreu a s2 inteira E antes é um espaço E depois da palavra é um espaço {
                 retorna posicao atual
+             }
+             ou se percorreu a s2 inteira E antes é um espaço E depois é o final de s1{
+                 retorna posicao atual
+             }
+             ou se percorreu a s2 inteira E é a primeira letra de s1 E depois da palavra é um espaço{
+                retorna posicao atual  
              }
           }
         }
@@ -50,7 +56,7 @@ anterior: ../
     }
 
     apagaPalavra(char s1[], char s2[]){
-        ## Doing 
+        ## Doing
     }
 
     removePalavras(char s[],  char vs[][MAX], int n){
