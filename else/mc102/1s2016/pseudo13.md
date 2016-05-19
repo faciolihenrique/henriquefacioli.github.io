@@ -50,10 +50,14 @@ anterior: ../
     }
 
     apagaPalavra(char s1[], char s2[]){
-
+        ## Doing 
     }
 
     removePalavras(char s[],  char vs[][MAX], int n){
+        loop em n{
+            enquanto apagaPalavra(s, s[n]) for 1
+        }
+        removeEspacos de n
 
     }
 
