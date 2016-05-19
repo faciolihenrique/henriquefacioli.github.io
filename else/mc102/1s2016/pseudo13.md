@@ -11,47 +11,52 @@ anterior: ../
     removeEspacos(char s[]){
         # precisa de 2 variaveis, uma que controla o andamento de s
         # e outra que controla a posicao de copia
-        percorre s até o final (utilizando a posicao de andamento){
-            # Se for espaço no meio da string
-            se s[posicao de andamento] for espaço E posicao andamento diferente de 0{
+        percorre s até o final (utilizando a posicao_andamento){
+            # Se for espaço no meio de s
+            se s[posicao_andamento] for espaço E posicao_andamento diferente de 0{
                 faz s na posicao_copia receber s na posicao_andamento
-                incremente posicao de copia
-                enquanto s na posicao de andamento for espaço{
-                    incrementa posicao de andamento;
+                incremente posicao_copia
+                enquanto s na posicao_andamento for espaço{
+                    incrementa posicao_andamento;
                 }
             }
-            # Se for espaço na primeira letra
+            # Se for espaço na primeira letra de s
             ou se s[posicao_andamento] for espaço{
-                enquanto s na posicao de andamento for espaço{
-                    incrementa posicao de andamento;
+                enquanto s na posicao_andamento for espaço{
+                    incrementa posicao_andamento;
                 }
             }
+            # Agora, se tivesse espaço entre uma letra e outra, copia sem
             faz s na posicao_copia receber s na posicao_andamento
-            incremente posicao de copia
+            incremente posicao_copia
         }
+        # Finalizar a string significa colocar um \0 em sua ultima posicao
         finaliza a string*;
     }
 
     contemPalavra(char s1[], char s2[]){
         percorre s1{
-          se s1 na posição atual for igual ao s2[0] E ela for começo de palavra{
-             enquanto s1[posicao atual + cont] = s2[cont]{
-                incrementa o contador
-             }
-             se percorreu a s2 inteira E antes é um espaço E depois da palavra é um espaço {
-                retorna posicao atual
-             }
-             ou se percorreu a s2 inteira E antes é um espaço E depois é o final de s1{
-                 retorna posicao atual
-             }
-             ou se percorreu a s2 inteira E é a primeira letra de s1 E depois da palavra é um espaço{
-                retorna posicao atual  
-             }
+            # Se a primeira letra for igual, entra no loop e percorre letra por
+            # letra de s1 junto com s2
+            se s1 na posição atual for igual ao s2[0] E ela for começo de palavra{
+                enquanto s1[posicao atual + cont] = s2[cont]{
+                    incrementa o cont
+                }
+
+                se percorreu a s2 inteira E antes é um espaço E depois da palavra é um espaço {
+                    retorna posicao atual;
+                }
+                ou se percorreu a s2 inteira E antes é um espaço E depois é o  finalde s1{
+                    retorna posicao atual;
+                }
+                ou se percorreu a s2 inteira E é a primeira letra de s1 E depois   dapalavra é um espaço{
+                    retorna posicao atual;
+                }
           }
         }
 
         se terminou de percorrer s1{
-          retorna -1
+            retorna -1
         }
     }
 
@@ -63,7 +68,7 @@ anterior: ../
         loop em n{
             enquanto apagaPalavra(s, s[n]) for 1
         }
-        removeEspacos de n
+        removeEspacos de s
 
     }
 
