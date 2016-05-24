@@ -8,10 +8,50 @@ anterior: ../
 ### Em andamento
 
 {% highlight bash linenos%}
+    # As 3 funções abaixo são "importadas" do lab13.
+    # Copie e cole elas no topo do arquivo, entre os define's
+    # e a função remove palavra
+
+    int contemPalavra(s1[],s2){
+        # ESSA FUNCAO DEVE SER ADICIONA POR VOCE AO ARQUIVO,
+        # ela é igual ao do laboratório anterior
+    }
+    void removeEspacos(s[]){
+        # ESSA FUNCAO DEVE SER ADICIONA POR VOCE AO ARQUIVO,
+        # ela é igual ao do laboratório anterior
+    }
+    int apagaPalavra(char s1[], char s2[]){
+        # ESSA FUNCAO DEVE SER ADICIONA POR VOCE AO ARQUIVO,
+        # ela é igual ao do laboratório anterior
+    }
+
+
+    int contemPalavras(s[],vs[][MAX],n){
+        loop de 0 até n{
+            se contemPalavra(s, vs[posicao_atual]) for -1{
+                retorna 0
+            }
+        }
+
+        retorna 1
+    }
+
+    void removePalavras(s[],vs[][MAX], n){
+        # Se reparar, apesar se ter que implementar essa função no lab 14,
+        # ela é a mesma do lab 13
+        # então, é só copiar!
+    }
+
+    void pagsResposta(paginas[][MAX],numPag,termosBusca[][MAX], numTer,resp[]){
+
+    }
+    void linksResposta(links[MAX_PAG][MAX_PAG],numPag, resp[],numLinks[])
 
 {% endhighlight %}
 
 ### Dicas
+1. Adicione ao arquivo a função contemPalavra do ultimo laboratório!
+2. Alguns alunos tiveram problema no laboratório 13 devido a ordem de declaração das funções. Se você vai usar uma função X em uma outra função Y, a função X deve ser implementada antes E deve ser escrita "acima" da função . Ex: Usaremos a funcao contemPalavra em contemPalavras, então, a declaração de contemPalavra deve estar acima de contemPalavras, como visto...
 
 ### Como rodar com dois arquivos?
 
@@ -28,8 +68,11 @@ O testador é um script criado pelo professor Zanoni, disponível em sua página
 
  1. Crie um diretório (pasta) para o laboratorio 14. Por exemplo, criarei uma pasta em Documentos com o nome lab14
  2. Faça o download dos dois arquivos [lab14.c](https://susy.ic.unicamp.br:9999/mc102ij/14/aux/lab14.c) e [lab14_main.c](https://susy.ic.unicamp.br:9999/mc102ij/14/aux/lab14_main.c) deixando os dois dentro do diretório que voce criou para o laboratório 14
- 3. Faça o download do testador na página do zanoni
+ 3. Faça o download do [testador](http://www.ic.unicamp.br/~zanoni/mc102/2016-1s/testador/testador.sh) que está na página do zanoni na mesma pasta que está o seu código. Uma dica é clicar com o botão direito do mouse e então salvar-como, pois aí você já pode salvá-lo diretamente na pasta.
  4. Abra o terminal.
  5. Navegue até o diretório (pasta) que estão os arquivos. (utilizando o comando 'cd' Ex. `cd Documentos/lab14`).
  6. Execute o comando : `chmod a+x testador.sh`
  7. Execute o comando : `./testador.sh mc102ij 14`
+
+#### CodeBlocks
+ Não sei usar. Se alguém souber, pf me avise que eu crio um pequeno tutorial aqui :)

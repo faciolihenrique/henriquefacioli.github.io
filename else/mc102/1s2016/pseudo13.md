@@ -5,8 +5,6 @@ postName: <a href="https://susy.ic.unicamp.br:9999/mc102ij/13/enunc.html">Labora
 anterior: ../
 ---
 
-### Em andamento
-
 {% highlight bash linenos%}
     removeEspacos(char s[]){
         # precisa de 2 variaveis, uma que controla o andamento de s
@@ -61,14 +59,21 @@ anterior: ../
     }
 
     apagaPalavra(char s1[], char s2[]){
-        ## Doing
+        se contemPalavra(s1, s2) for -1{
+            retorna 0
+        }se não{
+            loop que vai de (posicao que foi retornado por contemPalavra (posicao) até (posicao+ tamanho_de_s2){
+                s1[posicao_atua] recebe ' '
+            }
+        }
     }
 
     removePalavras(char s[],  char vs[][MAX], int n){
         loop em n{
-            enquanto apagaPalavra(s, s[n]) for 1
+            enquanto (apagaPalavra(s, s[n]) for 1){
+            }
         }
-        removeEspacos de s
+        removeEspacos(s)
 
     }
 
