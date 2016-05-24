@@ -32,7 +32,6 @@ anterior: ../
                 retorna 0
             }
         }
-
         retorna 1
     }
 
