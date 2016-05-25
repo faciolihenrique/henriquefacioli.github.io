@@ -74,4 +74,5 @@ O testador é um script criado pelo professor Zanoni, disponível em sua página
  7. Execute o comando : `./testador.sh mc102ij 14`
 
 #### CodeBlocks
- Não sei usar. Se alguém souber, pf me avise que eu crio um pequeno tutorial aqui :)
+Agradecimento a Sabrina::
+" Em File você vai em New e lá tem a opção Projects, clicando em Projects você escolhe "empty project" clica em Go e depois escolhe um nome para o projeto (lab14) e clica em Finish. Vai aparecer na barra lateral o seu projeto, ai com o botão direito você vai em add files e coloca o arquivo das funções e da main ali. Ai clicando em cada um dá para editar e ele compila com a main. "
