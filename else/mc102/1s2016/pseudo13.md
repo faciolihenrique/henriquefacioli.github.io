@@ -1,7 +1,7 @@
 ---
 layout: code
 title: henrique - o resto
-postName: <a href="https://susy.ic.unicamp.br:9999/mc102ij/13/enunc.html">Laboratório 13 - Conjuntos</a>
+postName: <a href="https://susy.ic.unicamp.br:9999/mc102ij/13/enunc.html">Laboratório 13 - Funções para strings</a>
 anterior: ../
 ---
 
