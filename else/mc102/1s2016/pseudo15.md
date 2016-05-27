@@ -1,7 +1,7 @@
 ---
 layout: code
 title: henrique - o resto
-postName: <a href="https://susy.ic.unicamp.br:9999/mc102ij/15/enunc.html">Laboratório 15 - Pesquisas</a>
+postName: <a href="https://susy.ic.unicamp.br:9999/mc102ij/15/enunc.html">Laboratório 15 - Registros com Ponteiros </a>
 anterior: ../
 ---
 
@@ -9,9 +9,51 @@ anterior: ../
 
 {% highlight bash linenos%}
 
+    criar_base(Base* base, int n) {
+        # Voce deve fazer os campos da estrutura base passada como argumento
+        # receber os valores necessários
+        base->armazenado recebe 0
+        base->capacidade recebe n
+        base->registros recebe a alocação de um vetor de n registros
+
+        printf("Base criada.\n");
+        return;
+    }
+
+    buscar(Base* base, int ra) {
+        # Percorre o vetor de registros que foi alocado por você na estrutura
+        # base, verificando se registro->ra é igaul a ra, se sim, retorna a posi
+        # ção daquele registro no vetor de registro daquela base
+
+        return -1;
+    }
+
+    imprimir(Base* base, int ra) {
+        printf("Aluno %d nao encontrado.\n", ra);
+    }
+
+    adicionar(Base* base, int ra, int telefone, char* nome) {
+        return;
+    }
+
+    remover(Base* base, int ra) {
+      return;
+    }
+
+    liberar_base(Base* base) {
+        # Deve ser liberado o vetor de registro
+        # e depois liberado a base
+
+        return;
+    }
+
+
+
 {% endhighlight %}
 
 ### Dicas
+1. Para saber o tamanho de uma estrutura é possível usar a função size_of(ESTRUTURA). Ex: Para saber o tamanho de um inteiro podemos usar size_of(int)
+2. A função para alocar algo na memória é malloc(TAMANHO_DA_ALOCAÇÃO). Ex. Se queremos alocar um vetor de 5 inteiros podemos usar malloc( (size_of(int) * 5) )
 
 
 ### Como rodar com dois arquivos?
@@ -26,7 +68,7 @@ anterior: ../
 
 #### Usando o [testador](http://www.ic.unicamp.br/~zanoni/mc102/2016-1s/testador/)
 O testador é um script criado pelo professor Zanoni, disponível em sua página. Aqui é apenas um miniguia de como utilizar.
-Ele é muito bom pois já compila e testa seu código com os testes abertos do susy. Aconselho a usa-lo
+Ele é muito bom pois já compila e testa seu código com os testes abertos do susy. Aconselho a usá-lo
 
  1. Crie um diretório (pasta) para o laboratorio 15. Por exemplo, criarei uma pasta em Documentos com o nome lab15
  2. Faça o download dos dois arquivos [lab15.c](https://susy.ic.unicamp.br:9999/mc102ij/15/aux/lab15.c) e [lab15_main.c](https://susy.ic.unicamp.br:9999/mc102ij/15/aux/lab15_main.c) deixando os dois dentro do diretório que voce criou para o laboratório 15
