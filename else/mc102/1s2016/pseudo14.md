@@ -42,15 +42,34 @@ anterior: ../
     }
 
     void pagsResposta(paginas[][MAX],numPag,termosBusca[][MAX], numTer,resp[]){
-
+        loop de 0 até numPag{
+            se contemPalavras(pagina[atual], termosBusca,numTer) for 1{
+                resp[atual] = 1;
+            }ou então{
+                resp[atual] = 0;
+            }
+        }
     }
-    void linksResposta(links[MAX_PAG][MAX_PAG],numPag, resp[],numLinks[])
+
+    void linksResposta(links[MAX_PAG][MAX_PAG], numPag, resp[], numLinks[]){
+        # Para fazer esta função você deve contar o número de 1's que existem na
+        # n-ésima coluna de links (em que n representa a n-ésima pagina) descon-
+        # siderando as linhas k's, em que resp[k] == 0, e armazenar essa soma em
+        # numLinks[n]
+        # não farei a função aqui por que será um gabarito MUITO grande (assim
+        # como a função pagsResposta...)
+    }
 
 {% endhighlight %}
 
 ### Dicas
 1. Adicione ao arquivo a função contemPalavra do ultimo laboratório!
 2. Alguns alunos tiveram problema no laboratório 13 devido a ordem de declaração das funções. Se você vai usar uma função X em uma outra função Y, a função X deve ser implementada antes E deve ser escrita "acima" da função . Ex: Usaremos a funcao contemPalavra em contemPalavras, então, a declaração de contemPalavra deve estar acima de contemPalavras, como visto...
+3. Alguns problemas que foram encontrados em aula:
+
+    1. Teste 10 e 11 : reveja sua função contemPalavra.
+    2. Aparentemente está certo, mas não passa no suzy: Verifique se sua string não está com espaço (' ') no final da string.
+4.
 
 ### Como rodar com dois arquivos?
 
