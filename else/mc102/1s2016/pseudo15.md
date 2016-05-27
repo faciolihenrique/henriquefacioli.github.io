@@ -52,8 +52,8 @@ anterior: ../
 {% endhighlight %}
 
 ### Dicas
-1. Para saber o tamanho de uma estrutura é possível usar a função size_of(ESTRUTURA). Ex: Para saber o tamanho de um inteiro podemos usar size_of(int)
-2. A função para alocar algo na memória é malloc(TAMANHO_DA_ALOCAÇÃO). Ex. Se queremos alocar um vetor de 5 inteiros podemos usar malloc( (size_of(int) * 5) )
+1. Para saber o tamanho de uma estrutura é possível usar a função sizeof(ESTRUTURA). Ex: Para saber o tamanho de um inteiro podemos usar sizeof(int)
+2. A função para alocar algo na memória é malloc(TAMANHO_DA_ALOCAÇÃO). Ex. Se queremos alocar um vetor de 5 inteiros podemos usar malloc( (sizeof(int) * 5) )
 
 
 ### Como rodar com dois arquivos?
