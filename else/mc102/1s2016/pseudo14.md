@@ -5,8 +5,6 @@ postName: <a href="https://susy.ic.unicamp.br:9999/mc102ij/14/enunc.html">Labora
 anterior: ../
 ---
 
-### Em andamento
-
 {% highlight bash linenos%}
     # As 3 funções abaixo são "importadas" do lab13.
     # Copie e cole elas no topo do arquivo, entre os define's
