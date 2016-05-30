@@ -5,13 +5,13 @@ postName: <a href="https://susy.ic.unicamp.br:9999/mc102ij/15/enunc.html">Labora
 anterior: ../
 ---
 
-### Em andamento
 
 {% highlight bash linenos%}
 
     criar_base(Base* base, int n) {
         # Voce deve fazer os campos da estrutura base passada como argumento
         # receber os valores necessários
+
         base->armazenado recebe 0
         base->capacidade recebe n
         base->registros recebe a alocação de um vetor de n registros
@@ -24,20 +24,65 @@ anterior: ../
         # Percorre o vetor de registros que foi alocado por você na estrutura
         # base, verificando se registro->ra é igaul a ra, se sim, retorna a posi
         # ção daquele registro no vetor de registro daquela base
+        loop de 0 até base->armazenado{
+            se (base->registro[atual])->ra for igual ao ra{
+                retorna posição atual;
+            }
+        }
 
         return -1;
     }
 
     imprimir(Base* base, int ra) {
-        printf("Aluno %d nao encontrado.\n", ra);
+        faz a busca para saber se existe o registro na base ou não;
+        se sim{
+            imprime
+        }se não{
+            printf("Aluno %d nao encontrado.\n", ra);
+        }
     }
 
     adicionar(Base* base, int ra, int telefone, char* nome) {
+        # Adiciona na ultima posição do vetor de registro da base OU adiciona
+        # na posição em que o RA possui um valor determinado pelo remover.
+        # Caso consiga adicionar, incrementar o número de registo na base!
+        # Ultima posiçao já existente : base->armazenado
+        # Ex de acesso ao telefone do registo k:
+        # (base->registro[k])->telefone
+
+        faz a busca para saber se existe o registro na base ou não;
+        se houver{
+            modifica o registro
+            imprime: Alterado: RA - TELEFONE - NOME\n
+        }se não{
+            verifica se é possivel adicionar mais um.
+            se não{
+                imprime Erro: base cheia.\n
+            }se sim{
+                procura o primeiro lugar para adicionar um novo registro**
+                adiciona um novo registro nessa posição
+                imprime Adicionado: RA - TELEFONE - NOME\n
+            }
+        }
+
         return;
     }
 
     remover(Base* base, int ra) {
-      return;
+        # Você deve remover o registro da base caso ele exista. Você deve sina-
+        # lizar de algum modo que foi removido. Sugiro colocar -1 no ra daquele
+        # registro, assim você usar a função busca com o valor -1 quando for
+        # procurar o primeiro lugar para adicionar um novo registro
+        # Não esqueça de decrementar o base->armazenado se necessário
+
+        faz a busca para saber se existe o registro na base ou não;
+        se sim{
+            remove aquele registro
+            imprime Aluno RA removido
+        }se não{
+            imprime Aluno RA nao encontrado.\n
+        }
+        return;
     }
 
     liberar_base(Base* base) {
@@ -54,7 +99,10 @@ anterior: ../
 ### Dicas
 1. Para saber o tamanho de uma estrutura é possível usar a função sizeof(ESTRUTURA). Ex: Para saber o tamanho de um inteiro podemos usar sizeof(int)
 2. A função para alocar algo na memória é malloc(TAMANHO_DA_ALOCAÇÃO). Ex. Se queremos alocar um vetor de 5 inteiros podemos usar malloc( (sizeof(int) * 5) )
-
+3. Lembre-se:
+    - base->armazenado informa o número de registros existentes
+    - base->capacidade informa o número maximo de registros
+    - base->registros contém os registros. Para fazer acesso ao n-ésimo registro é possível usar: base->registro[n]
 
 ### Como rodar com dois arquivos?
 
