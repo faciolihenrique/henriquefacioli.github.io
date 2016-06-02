@@ -99,10 +99,12 @@ anterior: ../
 ### Dicas
 1. Para saber o tamanho de uma estrutura é possível usar a função sizeof(ESTRUTURA). Ex: Para saber o tamanho de um inteiro podemos usar sizeof(int)
 2. A função para alocar algo na memória é malloc(TAMANHO_DA_ALOCAÇÃO). Ex. Se queremos alocar um vetor de 5 inteiros podemos usar malloc( (sizeof(int) * 5) )
-3. Lembre-se:
+3. Em C , não é possível passar uma string para outra utilizando o = ; Podemos, no entanto, usar uma função da biblioteca string.h chamada strcpy(S1, S2), que copia o texto da string2 (S2) para string1(S1)
+4. Lembre-se:
     - base->armazenado informa o número de registros existentes
     - base->capacidade informa o número maximo de registros
     - base->registros contém os registros. Para fazer acesso ao n-ésimo registro é possível usar: base->registro[n]
+
 
 ### Como rodar com dois arquivos?
 
