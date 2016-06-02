@@ -23,6 +23,7 @@ anterior: ../
  3. Para compilar esse laboratório, abra o terminal e navegue até o diretório  (utilizando o comando 'cd' Ex. <code>cd Documents/lab16</code>). Quando estiver  dentro do diretório, rode o seguinte código:
  <code>gcc lab16.c lab16_main.c -o lab16</code>
  4. Para rodar o executável, rode <code>./lab16</code>
+ 5. 
 
 #### Usando o [testador](http://www.ic.unicamp.br/~zanoni/mc102/2016-1s/testador/)
 O testador é um script criado pelo professor Zanoni, disponível em sua página. Aqui é apenas um miniguia de como utilizar.
