@@ -2,7 +2,7 @@
 layout: post
 title: henrique's unicorn
 postName: "Changing default file manager in Cinnamon"
-date: 2016-05-02
+date: 2016-10-26
 comments: true
 ---
 I've been using [cinnamon](https://github.com/linuxmint/Cinnamon) for the last two months because of its nice [HiDPI](https://wiki.archlinux.org/index.php/HiDPI) management in 4k screen. (yet i havent figure out how to adequate de dopio screen resolution - 4k and 1k ☹)
