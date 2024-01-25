@@ -2,13 +2,13 @@
 layout: null
 ---
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
+<feed xmlns="https://www.w3.org/2005/Atom">
 
-	<title>Unicorn Blog</title>
-	<link href="http://henrique.me/blog/atom.xml" rel="self"/>
-	<link href="http://henrique.me/blog"/>
+	<title>hnf's</title>
+	<link href="https://henriquefacioli.github.io/blog/atom.xml" rel="self"/>
+	<link href="https://henriquefacioli.github.io//blog"/>
 	<updated>{{ site.time | date_to_xmlschema }}</updated>
-	<id>http://henrique.me/blog</id>
+	<id>https://henriquefacioli.github.io/blog</id>
 	<author>
 		<name>Henrique</name>
 		<email>henrique dot facioli @ gmail dot com/email>
@@ -17,9 +17,9 @@ layout: null
 	{% for post in site.posts %}
 		<entry>
 			<title>{{ post.title }}</title>
-			<link href="http://henrique.me/blog{{ post.url }}"/>
+			<link href="https://henriquefacioli.github.io/blog{{ post.url }}"/>
 			<updated>{{ post.date | date_to_xmlschema }}</updated>
-			<id>http://henrique.me/blog/{{ post.id }}</id>
+			<id>https://henriquefacioli.github.io/blog/{{ post.id }}</id>
 			<content type="html">{{ post.content | xml_escape }}</content>
 		</entry>
 	{% endfor %}

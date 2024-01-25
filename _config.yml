@@ -1,12 +1,38 @@
-title: henrique me
-author: Henrique Noronha Facioli
-url: "http://henrique.me"
-description: "a website meant to be mine. here you can find a little about so many things. take a look."
-baseurl: ""
-mail: henrique.fac<span style="display:none">hello</span>ioli@gmail.com
-pgp: "0xEA1C7E63"
-twitter_username: henriquefacioli
-github_username: henriquefacioli
-markdown: kramdown
-permalink: /blog/:year/:month/:day/:title
-highlighter: rouge
+# Where things are
+source              : .
+destination         : ./_site
+plugins_dir         : _plugins
+layouts_dir         : _layouts
+data_dir            : _data
+includes_dir        : _includes
+
+title               : henrique me
+author              : Henrique Noronha Facioli
+url                 : "henriquefacioli.github.io"
+description         : "a website meant to be mine. here you can find a little about so many things. take a look."
+baseurl             : ""
+mail                : henrique.fac<span style="display:none">hello</span>ioli@gmail.com
+pgp                 : "0xEA1C7E63"
+twitter_username    : ""
+github_username     : faciolihenrique
+markdown            : kramdown
+permalink           : /blog/:year/:month/:day/:title
+highlighter         : rouge
+
+# Markdown Processors
+kramdown:
+  auto_ids          : true
+  entity_output     : as_char
+  toc_levels        : [1, 2, 3, 4, 5, 6]
+  smart_quotes      : lsquo,rsquo,ldquo,rdquo
+  input             : GFM
+  hard_wrap         : false
+  footnote_nr       : 1
+  show_warnings     : false
+
+plugins:
+  - jekyll-feed
+  - jekyll_picture_tag
+
+feed:
+  path: /blog/atom.xml

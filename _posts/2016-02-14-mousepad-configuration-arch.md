@@ -1,6 +1,6 @@
 ---
 layout: post
-title: henrique's unicorn
+title: hnf's
 postName: "Archdiary - Mousepad configuration"
 date: 2016-02-14
 comments: true

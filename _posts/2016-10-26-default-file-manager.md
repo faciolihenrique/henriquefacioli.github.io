@@ -1,6 +1,6 @@
 ---
 layout: post
-title: henrique's unicorn
+title: hnf's
 postName: "Changing default file manager in Cinnamon"
 date: 2016-10-26
 comments: true

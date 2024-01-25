@@ -1,6 +1,6 @@
 ---
 layout: post
-title: henrique's unicorn
+title: hnf's
 postName: "Archdiary - HDMI problem"
 date: 2016-02-18
 comments: true
