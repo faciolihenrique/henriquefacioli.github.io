@@ -3,7 +3,7 @@ layout: post
 title: hnf's
 postName: "knowlattesgraph"
 date: 2019-11-05
-comments: false
+comments: true
 ---
 
 As a final project in my college, me and my friend Thiagao, wanted to try to learn something while keeping things easy and for that we aimed in

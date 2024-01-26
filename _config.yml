@@ -6,17 +6,19 @@ layouts_dir         : _layouts
 data_dir            : _data
 includes_dir        : _includes
 
-title               : henrique me
-author              : Henrique Noronha Facioli
-url                 : "henriquefacioli.github.io"
+title               : hnf website
+author              : hnf
+url                 : henriquefacioli.github.io
 description         : "a website meant to be mine. here you can find a little about so many things. take a look."
-baseurl             : ""
+tagline             : "henrique simple website"
 mail                : henrique.fac<span style="display:none">hello</span>ioli@gmail.com
 pgp                 : "0xEA1C7E63"
 twitter_username    : ""
 github_username     : faciolihenrique
+
+# Msite definitions
 markdown            : kramdown
-permalink           : /blog/:year/:month/:day/:title
+permalink           : /posts/:year/:month/:day/:title
 highlighter         : rouge
 
 # Markdown Processors
@@ -32,7 +34,8 @@ kramdown:
 
 plugins:
   - jekyll-feed
-  - jekyll_picture_tag
+  - jekyll-seo-tag
+  - jekyll-sitemap
 
 feed:
   path: /blog/atom.xml
