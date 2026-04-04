@@ -224,17 +224,55 @@
         // AUDIO LOGIC (Monophonic sequence detection)
         async function setupMic() {
             try {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // 1. Criar ou retomar o contexto de áudio
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                // Se o contexto estiver suspenso (comum em navegadores modernos), acorda ele
+                if (audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+
+                console.log("Solicitando acesso ao microfone...");
+                
+                // 2. Tentar capturar o áudio
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: false, // Melhora a detecção de instrumentos
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    } 
+                });
+
                 const source = audioCtx.createMediaStreamSource(stream);
-                analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048;
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 2048;
                 source.connect(analyser);
                 dataArray = new Float32Array(analyser.frequencyBinCount);
+                
                 isMicEnabled = true;
                 document.getElementById("micStatusText").innerText = "On-line";
+                document.getElementById("micStatusIcon").classList.add("mic-active");
                 document.getElementById("detectedNoteContainer").classList.remove("hidden");
+                
+                console.log("Microfone ativado com sucesso!");
                 detectPitch();
-            } catch (err) { alert("Microfone negado."); }
+
+            } catch (err) {
+                // Debug detalhado no console
+                console.error("Erro detalhado do microfone:", err);
+                
+                if (err.name === 'NotAllowedError') {
+                    alert("Erro: Você bloqueou o microfone no navegador. Clique no cadeado ao lado da URL e limpe as permissões.");
+                } else if (err.name === 'NotFoundError') {
+                    alert("Erro: Nenhum microfone foi encontrado no seu dispositivo.");
+                } else if (err.name === 'NotReadableError') {
+                    alert("Erro: O microfone já está sendo usado por outro aplicativo (Zoom, Meet, etc).");
+                } else {
+                    alert("Erro ao acessar microfone: " + err.message);
+                }
+            }
         }
 
         function detectPitch() {
