@@ -6,28 +6,23 @@
     <title>Music Reader Pro - Deep Dark Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/cjs/vexflow.js"></script>
-    <script>
-        // Configuração do Tailwind para modo escuro via classe
-        tailwind.config = { darkMode: 'class' }
-    </script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
         body { font-family: 'Inter', sans-serif; transition: background-color 0.3s ease; }
-        
-        /* Cores de Erro/Acerto Adaptadas para Deep Dark */
         .correct-flash { background-color: #dcfce7 !important; transition: background 0.2s; }
-        .dark .correct-flash { background-color: #064e3b !important; } /* Verde escuro profundo */
-        
+        .dark .correct-flash { background-color: #064e3b !important; }
         .wrong-flash { background-color: #fee2e2 !important; animation: shake 0.2s ease-in-out 0s 2; }
-        .dark .wrong-flash { background-color: #7f1d1d !important; } /* Vermelho escuro profundo */
-        
+        .dark .wrong-flash { background-color: #7f1d1d !important; }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(5px); } 75% { transform: translateX(-5px); } }
         #settingsPanel { transition: transform 0.3s ease-in-out; transform: translateX(100%); }
         #settingsPanel.open { transform: translateX(0); }
         .timer-bar { transition: width 0.1s linear; }
     </style>
+  <script type="module" crossorigin>(function(){const t=document.createElement("link").relList;if(t&&t.supports&&t.supports("modulepreload"))return;for(const o of document.querySelectorAll('link[rel="modulepreload"]'))a(o);new MutationObserver(o=>{for(const s of o)if(s.type==="childList")for(const n of s.addedNodes)n.tagName==="LINK"&&n.rel==="modulepreload"&&a(n)}).observe(document,{childList:!0,subtree:!0});function r(o){const s={};return o.integrity&&(s.integrity=o.integrity),o.referrerPolicy&&(s.referrerPolicy=o.referrerPolicy),o.crossOrigin==="use-credentials"?s.credentials="include":o.crossOrigin==="anonymous"?s.credentials="omit":s.credentials="same-origin",s}function a(o){if(o.ep)return;o.ep=!0;const s=r(o);fetch(o.href,s)}})();function F(e,t){return[{key:`c/${e}`,name:"C",acc:null,clef:t},{key:`c/${e}`,name:"C#",acc:"#",clef:t},{key:`d/${e}`,name:"Db",acc:"b",clef:t},{key:`d/${e}`,name:"D",acc:null,clef:t},{key:`d/${e}`,name:"D#",acc:"#",clef:t},{key:`e/${e}`,name:"Eb",acc:"b",clef:t},{key:`e/${e}`,name:"E",acc:null,clef:t},{key:`f/${e}`,name:"F",acc:null,clef:t},{key:`f/${e}`,name:"F#",acc:"#",clef:t},{key:`g/${e}`,name:"Gb",acc:"b",clef:t},{key:`g/${e}`,name:"G",acc:null,clef:t},{key:`g/${e}`,name:"G#",acc:"#",clef:t},{key:`a/${e}`,name:"Ab",acc:"b",clef:t},{key:`a/${e}`,name:"A",acc:null,clef:t},{key:`a/${e}`,name:"A#",acc:"#",clef:t},{key:`b/${e}`,name:"Bb",acc:"b",clef:t},{key:`b/${e}`,name:"B",acc:null,clef:t}]}const ge=[...F(4,"treble"),...F(3,"bass")],fe=[...F(4,"treble"),...F(5,"treble"),...F(2,"bass"),...F(3,"bass")],te={C:"Dó","C#":"Dó#",Db:"Réb",D:"Ré","D#":"Ré#",Eb:"Mib",E:"Mi",F:"Fá","F#":"Fá#",Gb:"Solb",G:"Sol","G#":"Sol#",Ab:"Láb",A:"Lá","A#":"Lá#",Bb:"Sib",B:"Si"},ye={"C#":["C#","Db"],Db:["C#","Db"],"D#":["D#","Eb"],Eb:["D#","Eb"],"F#":["F#","Gb"],Gb:["F#","Gb"],"G#":["G#","Ab"],Ab:["G#","Ab"],"A#":["A#","Bb"],Bb:["A#","Bb"]};function L(e,t=!1,r="both"){const a=t?fe:ge,o=r==="both"?a:a.filter(s=>s.clef===r);return e?o:o.filter(s=>s.acc===null)}function T(e,t){return Array.from({length:t},()=>e[Math.floor(Math.random()*e.length)])}function be(e,t){var r;return e===t?!0:!!((r=ye[t])!=null&&r.includes(e))}function Q(e,t,r){const a=e.querySelector("svg");a&&(a.setAttribute("viewBox",`0 0 ${t} ${r}`),a.removeAttribute("width"),a.removeAttribute("height"),a.style.width="100%",a.style.height="auto",a.style.display="block")}function D(e,t,r){return e===t?r?"#a5b4fc":"#4f46e5":e<t?r?"#34d399":"#10b981":r?"#475569":"#e2e8f0"}function he(e,t,r,a,o,s="both"){e.innerHTML="";const n=Vex.Flow,c=o==="phrase"?470:270,l=t.filter(i=>!!(i!=null&&i.key));if(l.length===0)return;const u=a?"#64748b":"#cbd5e1";if(s!=="both"){const i=new n.Renderer(e,n.Renderer.Backends.SVG);i.resize(c,200);const m=i.getContext(),p=new n.Stave(10,60,c-20);p.setContext(m),m.setStrokeStyle(u),m.setFillStyle(u),p.addClef(s).draw();const y=l.map((E,me)=>{const U=new n.StaveNote({clef:s,keys:[E.key],duration:"q",auto_stem:!0});E.acc&&U.addModifier(new n.Accidental(E.acc),0);const J=D(me,r,a);return U.setStyle({fillStyle:J,strokeStyle:J}),U});try{const E=new n.Voice({num_beats:y.length,beat_value:4}).addTickables(y);new n.Formatter().joinVoices([E]).format([E],c-100),E.draw(m,p)}catch(E){console.error("VexFlow render error:",E)}Q(e,c,200);return}const N=new n.Renderer(e,n.Renderer.Backends.SVG);N.resize(c,300);const f=N.getContext(),$=25,h=c-$-10,g=new n.Stave($,30,h);g.setContext(f),f.setStrokeStyle(u),f.setFillStyle(u),g.addClef("treble").draw();const d=new n.Stave($,165,h);d.setContext(f),f.setStrokeStyle(u),f.setFillStyle(u),d.addClef("bass").draw();const v=new n.StaveConnector(g,d);v.setType(n.StaveConnector.type.BRACE),v.setContext(f).draw();const G=new n.StaveConnector(g,d);G.setType(n.StaveConnector.type.SINGLE_LEFT),G.setContext(f).draw();const O=l.length,I="rgba(0,0,0,0)",A=l.map((i,m)=>{if(i.clef==="treble"){const y=new n.StaveNote({clef:"treble",keys:[i.key],duration:"q",auto_stem:!0});return i.acc&&y.addModifier(new n.Accidental(i.acc),0),y.setStyle({fillStyle:D(m,r,a),strokeStyle:D(m,r,a)}),y}const p=new n.StaveNote({clef:"treble",keys:["b/4"],duration:"qr"});return p.setStyle({fillStyle:I,strokeStyle:I}),p}),ue=l.map((i,m)=>{if(i.clef==="bass"){const y=new n.StaveNote({clef:"bass",keys:[i.key],duration:"q",auto_stem:!0});return i.acc&&y.addModifier(new n.Accidental(i.acc),0),y.setStyle({fillStyle:D(m,r,a),strokeStyle:D(m,r,a)}),y}const p=new n.StaveNote({clef:"bass",keys:["d/3"],duration:"qr"});return p.setStyle({fillStyle:I,strokeStyle:I}),p});try{const i=new n.Voice({num_beats:O,beat_value:4}).addTickables(A),m=new n.Voice({num_beats:O,beat_value:4}).addTickables(ue);new n.Formatter().joinVoices([i]).joinVoices([m]).format([i,m],h-50),i.draw(f,g),m.draw(f,d)}catch(i){console.error("VexFlow render error:",i)}Q(e,c,300)}function ve(){const e=localStorage.getItem("theme");return e==="dark"||e==="light"?e:window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}function pe(e){e==="dark"?document.documentElement.classList.add("dark"):document.documentElement.classList.remove("dark"),localStorage.setItem("theme",e)}function Ee(e,t,r,a,o="circle"){e.innerHTML="";const s=t.length,n=d=>r==="solfege"?te[d]??d:d;if(o==="grid"){e.style.cssText="",e.className="mx-auto grid gap-3 w-full max-w-lg px-4 "+(s<=7?"grid-cols-7":"grid-cols-4 sm:grid-cols-6"),t.forEach(d=>{const v=document.createElement("button");v.className="bg-white dark:bg-[#2a2a2a] border-2 border-slate-100 dark:border-[#37393b] hover:border-indigo-500 hover:text-indigo-600 dark:hover:border-indigo-400 dark:hover:text-indigo-400 text-slate-700 dark:text-slate-200 py-4 rounded-2xl text-sm font-bold transition-all active:scale-95 shadow-sm",v.textContent=n(d),v.addEventListener("click",()=>a(d)),e.appendChild(v)});return}const c=s<=7?256:310,l=s<=7?84:108,u=c/2,N=c/2;e.className="mx-auto",e.style.cssText=`width:${c}px;height:${c}px;position:relative;`;const $=document.documentElement.classList.contains("dark")?"#374151":"#e2e8f0",h=document.createElementNS("http://www.w3.org/2000/svg","svg");h.setAttribute("width",String(c)),h.setAttribute("height",String(c)),h.style.cssText="position:absolute;top:0;left:0;pointer-events:none;";const g=document.createElementNS("http://www.w3.org/2000/svg","circle");g.setAttribute("cx",String(u)),g.setAttribute("cy",String(N)),g.setAttribute("r",String(l)),g.setAttribute("fill","none"),g.setAttribute("stroke",$),g.setAttribute("stroke-width","2"),h.appendChild(g),e.appendChild(h),t.forEach((d,v)=>{const G=v/s*2*Math.PI-Math.PI/2,O=u+l*Math.cos(G),I=N+l*Math.sin(G),A=document.createElement("button");A.style.cssText=`position:absolute;left:${O}px;top:${I}px;transform:translate(-50%,-50%);`,A.className="bg-white dark:bg-[#2a2a2a] border-2 border-slate-200 dark:border-[#37393b] hover:border-indigo-500 hover:text-indigo-600 dark:hover:border-indigo-400 dark:hover:text-indigo-400 text-slate-700 dark:text-slate-200 rounded-xl font-bold transition-all active:scale-95 shadow-sm z-10 text-center "+(s<=7?"px-4 py-3 text-base min-w-[60px]":"px-3 py-2.5 text-sm min-w-[50px]"),A.textContent=n(d),A.addEventListener("click",()=>a(d)),e.appendChild(A)})}function Y(e,t){const r=t==="correct"?"correct-flash":"wrong-flash",a=t==="correct"?200:300;e.classList.add(r),setTimeout(()=>e.classList.remove(r),a)}function we(e){const t=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"],r=Math.round(12*(Math.log(e/440)/Math.log(2)))+69;return t[(r%12+12)%12]}function Se(e,t){const r=e.length;let a=0;for(let l=0;l<r;l++)a+=e[l]*e[l];if(a=Math.sqrt(a/r),a<.01)return-1;const o=new Array(r).fill(0);for(let l=0;l<r;l++)for(let u=0;u<r-l;u++)o[l]+=e[u]*e[u+l];let s=0;for(;o[s]>o[s+1];)s++;let n=-1,c=-1;for(let l=s;l<r;l++)o[l]>n&&(n=o[l],c=l);return t/c}async function ke(){const e=window.AudioContext??window.webkitAudioContext,t=new e;t.state==="suspended"&&await t.resume();const r=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:!1,noiseSuppression:!1,autoGainControl:!1}}),a=t.createMediaStreamSource(r),o=t.createAnalyser();return o.fftSize=2048,a.connect(o),{analyser:o,dataArray:new Float32Array(o.frequencyBinCount),sampleRate:t.sampleRate,stop:()=>{r.getTracks().forEach(s=>s.stop()),t.close()}}}function xe(e,t,r,a){let o=!0;function s(){if(!o)return;e.analyser.getFloatTimeDomainData(e.dataArray);let n=0;for(let c=0;c<e.dataArray.length;c++)n+=e.dataArray[c]*e.dataArray[c];if(n=Math.sqrt(n/e.dataArray.length),a(n),n>t){const c=Se(e.dataArray,e.sampleRate);c!==-1&&r(we(c))}requestAnimationFrame(s)}return requestAnimationFrame(s),()=>{o=!1}}let H=0,M="practice",S="phrase",Z="solfege",k=!1,B=!1,x="both",ne="circle",W=!1,w=T(L(!1,!1),4),b=0,q=null,j=0,P=null,R=null,z=null,re=.01,X=ve();const oe=document.getElementById("score"),se=document.getElementById("timerDisplay"),ee=document.getElementById("game-container"),Ce=document.getElementById("buttonGrid"),Ae=document.getElementById("output"),K=document.getElementById("startBtn"),ae=document.getElementById("survivalBarContainer"),V=document.getElementById("survivalBar"),Be=document.getElementById("detectedNoteContainer"),Le=document.getElementById("detectedNoteText"),Te=document.getElementById("volMeter"),Ie=document.getElementById("themeIcon");function C(){he(Ae,w,b,X==="dark",S,x)}function _(){Ee(Ce,k?["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"]:["C","D","E","F","G","A","B"],Z,ce,ne)}function le(e){X=e,pe(e),Ie.textContent=e==="dark"?"☀️":"🌙",_(),C()}function ce(e){if(M!=="practice"&&!W)return;const t=w[b].name;be(e,t)?(b++,b>=w.length&&(H++,oe.textContent=String(H),Y(ee,"correct"),M==="survival"&&ie(),w=T(L(k,B,x),S==="single"?1:4),b=0),C()):Y(ee,"wrong")}function Fe(e){q&&clearInterval(q),j=e,q=setInterval(()=>{j--,se.textContent=`${j}s`,j<=0&&de("Fim de Tempo!")},1e3)}function ie(){P&&clearTimeout(P),V.style.width="100%",V.style.transition="none",V.offsetWidth,V.style.transition="width 3s linear",V.style.width="0%",P=setTimeout(()=>{W&&de("Lento!")},3e3)}function Me(){H=0,oe.textContent="0",W=!0,K.classList.add("hidden"),w=T(L(k,B,x),S==="single"?1:4),b=0,M==="timeAttack"?Fe(60):M==="survival"&&(se.textContent="∞",ae.classList.remove("hidden"),ie()),C()}function de(e){W=!1,q&&clearInterval(q),P&&clearTimeout(P),alert(`${e}
+Score: ${H}`),K.classList.remove("hidden"),ae.classList.add("hidden")}async function Ne(){z&&(z(),z=null),R&&(R.stop(),R=null);try{R=await ke(),Be.classList.remove("hidden"),document.getElementById("micToggle").textContent="🎤 Microfone Ativo",z=xe(R,re,e=>{ce(e),Le.textContent=Z==="solfege"?te[e]??e:e},e=>{Te.style.width=`${Math.min(e*500,100)}%`})}catch(e){console.error(e),alert("Erro ao acessar microfone.")}}document.getElementById("themeToggle").addEventListener("click",()=>le(X==="dark"?"light":"dark"));document.getElementById("toggleSettings").addEventListener("click",()=>document.getElementById("settingsPanel").classList.add("open"));document.getElementById("closeSettings").addEventListener("click",()=>document.getElementById("settingsPanel").classList.remove("open"));document.getElementById("exerciseType").addEventListener("change",e=>{S=e.target.value,w=T(L(k,B,x),S==="single"?1:4),b=0,C()});document.getElementById("accidentalToggle").addEventListener("change",e=>{k=e.target.checked,_(),w=T(L(k,B,x),S==="single"?1:4),b=0,C()});document.getElementById("namingSelect").addEventListener("change",e=>{Z=e.target.value,_()});document.getElementById("thresholdSlider").addEventListener("input",e=>{re=parseFloat(e.target.value)});document.getElementById("micToggle").addEventListener("click",Ne);document.getElementById("modeSelect").addEventListener("change",e=>{M=e.target.value,K.classList.toggle("hidden",M==="practice")});document.getElementById("buttonLayoutSelect").addEventListener("change",e=>{ne=e.target.value,_()});document.getElementById("staffModeSelect").addEventListener("change",e=>{x=e.target.value,w=T(L(k,B,x),S==="single"?1:4),b=0,C()});document.getElementById("extendedToggle").addEventListener("change",e=>{B=e.target.checked,w=T(L(k,B,x),S==="single"?1:4),b=0,C()});K.addEventListener("click",Me);le(X);_();C();</script>
 </head>
-<body class="bg-slate-50 dark:bg-[#0e0e0f] text-slate-900 dark:text-slate-200 h-screen flex flex-col overflow-hidden">
+<body class="bg-slate-50 dark:bg-[#0e0e0f] text-slate-900 dark:text-slate-200 min-h-screen flex flex-col">
 
     <header class="w-full bg-white dark:bg-[#0e0e0f] border-b border-slate-200 dark:border-[#37393b] px-6 py-4 flex justify-between items-center shrink-0 shadow-sm z-10">
         <div class="flex gap-8">
@@ -50,15 +45,13 @@
         </div>
     </header>
 
-    <main class="flex-grow flex flex-col items-center justify-center p-6 gap-8">
-        <div id="game-container" class="bg-white dark:bg-[#2a2a2a] p-10 rounded-[3rem] shadow-2xl dark:shadow-indigo-950/20 border border-slate-100 dark:border-[#37393b] flex flex-col items-center justify-center relative w-full max-w-xl min-h-[320px] transition-colors overflow-visible">
+    <main class="flex-grow flex flex-col items-center justify-center p-4 md:p-6 gap-4 md:gap-8">
+        <div id="game-container" class="bg-white dark:bg-[#2a2a2a] p-4 md:p-10 rounded-[2rem] md:rounded-[3rem] shadow-2xl dark:shadow-indigo-950/20 border border-slate-100 dark:border-[#37393b] flex flex-col items-center justify-center relative w-full max-w-xl transition-colors overflow-visible">
             <div id="output" class="flex justify-center w-full"></div>
-            
             <div id="detectedNoteContainer" class="absolute top-6 right-8 hidden bg-indigo-50 dark:bg-[#37393b] px-4 py-1.5 rounded-full border border-indigo-100 dark:border-indigo-900 flex items-center shadow-sm">
                 <span class="text-[10px] font-bold text-indigo-400 dark:text-indigo-300 uppercase mr-2">Ouvindo:</span>
                 <span id="detectedNoteText" class="text-sm font-black text-indigo-600 dark:text-indigo-400 uppercase">--</span>
             </div>
-
             <div id="survivalBarContainer" class="absolute bottom-0 left-0 w-full h-3 bg-slate-100 dark:bg-[#37393b] hidden rounded-b-[3rem] overflow-hidden">
                 <div id="survivalBar" class="h-full bg-orange-500 w-full timer-bar"></div>
             </div>
@@ -68,7 +61,7 @@
             Começar Treino
         </button>
 
-        <div id="buttonGrid" class="grid grid-cols-4 md:grid-cols-7 gap-3 w-full max-w-2xl px-4"></div>
+        <div id="buttonGrid" class="mx-auto"></div>
     </main>
 
     <aside id="settingsPanel" class="fixed top-0 right-0 h-full w-80 bg-white dark:bg-[#0e0e0f] shadow-2xl z-20 p-8 border-l border-slate-200 dark:border-[#37393b] overflow-y-auto text-slate-700 dark:text-slate-300">
@@ -76,7 +69,6 @@
             <h2 class="text-xl font-bold dark:text-white">Ajustes</h2>
             <button id="closeSettings" class="text-slate-400 hover:text-slate-600 p-2 font-bold">✕</button>
         </div>
-
         <div class="space-y-8">
             <section>
                 <label class="text-xs font-bold text-slate-400 uppercase block mb-4 tracking-widest">Exercício</label>
@@ -85,7 +77,6 @@
                     <option value="phrase" selected>Frase (4 notas)</option>
                 </select>
             </section>
-
             <section>
                 <label class="text-xs font-bold text-slate-400 uppercase block mb-4 tracking-widest">Áudio</label>
                 <button id="micToggle" class="w-full bg-indigo-50 dark:bg-[#2a2a2a] text-indigo-700 dark:text-indigo-400 text-sm font-bold py-4 rounded-2xl flex items-center justify-center gap-3 mb-4">
@@ -96,12 +87,24 @@
                 </div>
                 <input type="range" id="thresholdSlider" min="0.001" max="0.1" step="0.001" value="0.01" class="w-full accent-indigo-600">
             </section>
-
             <section>
                 <label class="text-xs font-bold text-slate-400 uppercase block mb-4 tracking-widest">Opções</label>
+                <select id="buttonLayoutSelect" class="w-full bg-slate-50 dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#37393b] text-sm font-bold rounded-xl p-3 mb-4">
+                    <option value="circle" selected>Botões em Círculo</option>
+                    <option value="grid">Botões em Grade</option>
+                </select>
+                <select id="staffModeSelect" class="w-full bg-slate-50 dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#37393b] text-sm font-bold rounded-xl p-3 mb-4">
+                    <option value="both" selected>Clave de Sol + Fá (Ambas)</option>
+                    <option value="treble">Clave de Sol (Treble)</option>
+                    <option value="bass">Clave de Fá (Bass)</option>
+                </select>
                 <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-[#2a2a2a] rounded-2xl mb-4">
                     <span class="text-sm font-bold">Acidentes (#/b)</span>
                     <input type="checkbox" id="accidentalToggle" class="w-5 h-5 accent-indigo-600">
+                </div>
+                <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-[#2a2a2a] rounded-2xl mb-4">
+                    <span class="text-sm font-bold">Extenso (linhas adicionais)</span>
+                    <input type="checkbox" id="extendedToggle" class="w-5 h-5 accent-indigo-600">
                 </div>
                 <select id="namingSelect" class="w-full bg-slate-50 dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#37393b] text-sm font-bold rounded-xl p-3 mb-4">
                     <option value="letters">C, D, E...</option>
@@ -116,256 +119,5 @@
         </div>
     </aside>
 
-    <script>
-        const VF = Vex.Flow;
-        const namingMap = { 'C': 'Dó', 'C#': 'Dó#', 'Db': 'Réb', 'D': 'Ré', 'D#': 'Ré#', 'Eb': 'Mib', 'E': 'Mi', 'F': 'Fá', 'F#': 'Fá#', 'Gb': 'Solb', 'G': 'Sol', 'G#': 'Sol#', 'Ab': 'Láb', 'A': 'Lá', 'A#': 'Lá#', 'Bb': 'Sib', 'B': 'Si' };
-        
-        const notesBase = [
-            { key: "c/4", name: "C", acc: null }, { key: "c/4", name: "C#", acc: "#" },
-            { key: "d/4", name: "Db", acc: "b" }, { key: "d/4", name: "D", acc: null },
-            { key: "d/4", name: "D#", acc: "#" }, { key: "e/4", name: "Eb", acc: "b" },
-            { key: "e/4", name: "E", acc: null }, { key: "f/4", name: "F", acc: null },
-            { key: "f/4", name: "F#", acc: "#" }, { key: "g/4", name: "Gb", acc: "b" },
-            { key: "g/4", name: "G", acc: null }, { key: "g/4", name: "G#", acc: "#" },
-            { key: "a/4", name: "Ab", acc: "b" }, { key: "a/4", name: "A", acc: null },
-            { key: "a/4", name: "A#", acc: "#" }, { key: "b/4", name: "Bb", acc: "b" },
-            { key: "b/4", name: "B", acc: null }
-        ];
-
-        let score = 0, namingConvention = "solfege", gameMode = "practice", exerciseType = "phrase";
-        let isGameActive = false, isMicEnabled = false, currentThreshold = 0.01, includeAccidentals = false;
-        let currentPhrase = [], activeNoteIndex = 0;
-        let audioCtx, analyser, dataArray;
-
-        // UI Elements
-        const scoreEl = document.getElementById("score"), timerEl = document.getElementById("timerDisplay"), buttonGrid = document.getElementById("buttonGrid");
-        const gameContainer = document.getElementById("game-container");
-
-        // --- THEME LOGIC (Deep Dark) ---
-        const themeToggle = document.getElementById('themeToggle');
-        const themeIcon = document.getElementById('themeIcon');
-        
-        function applyTheme(theme) {
-            if (theme === 'dark') {
-                document.documentElement.classList.add('dark');
-                themeIcon.innerText = '☀️';
-            } else {
-                document.documentElement.classList.remove('dark');
-                themeIcon.innerText = '🌙';
-            }
-            renderChallenge(); // Redesenha com novas cores
-        }
-
-        const savedTheme = localStorage.getItem('theme');
-        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        
-        if (savedTheme) applyTheme(savedTheme);
-        else if (systemDark) applyTheme('dark');
-
-        themeToggle.onclick = () => {
-            const isDark = document.documentElement.classList.contains('dark');
-            const newTheme = isDark ? 'light' : 'dark';
-            localStorage.setItem('theme', newTheme);
-            applyTheme(newTheme);
-        };
-
-        function initButtons() {
-            buttonGrid.innerHTML = "";
-            const list = includeAccidentals ? ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] : ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-            list.forEach(n => {
-                const btn = document.createElement("button");
-                btn.className = "bg-white dark:bg-[#2a2a2a] border-2 border-slate-100 dark:border-[#37393b] hover:border-indigo-500 hover:text-indigo-600 text-slate-700 dark:text-slate-200 py-4 rounded-2xl text-sm font-bold transition-all active:scale-95 shadow-sm";
-                btn.innerText = namingConvention === 'solfege' ? namingMap[n] : n;
-                btn.onclick = () => checkAnswer(n);
-                buttonGrid.appendChild(btn);
-            });
-        }
-
-        function generatePhrase() {
-            const pool = includeAccidentals ? notesBase : notesBase.filter(n => !n.acc);
-            const len = exerciseType === 'single' ? 1 : 4;
-            currentPhrase = Array.from({length: len}, () => pool[Math.floor(Math.random() * pool.length)]);
-            activeNoteIndex = 0;
-        }
-
-        function renderChallenge() {
-            const output = document.getElementById("output");
-            if (!output) return;
-            output.innerHTML = "";
-            
-            // SEGURANÇA 1: Garante que a frase exista antes de tentar mapear as notas
-            if (!currentPhrase || currentPhrase.length === 0) {
-                generatePhrase();
-            }
-
-            const isDark = document.documentElement.classList.contains('dark');
-            const renderer = new VF.Renderer(output, VF.Renderer.Backends.SVG);
-            const width = exerciseType === 'phrase' ? 450 : 250;
-            renderer.resize(width, 200);
-            const context = renderer.getContext();
-            
-            const staveColor = isDark ? '#64748b' : '#cbd5e1';
-            const stave = new VF.Stave(10, 60, width - 20);
-            stave.setContext(context);
-            stave.getContext().setStrokeStyle(staveColor);
-            stave.getContext().setFillStyle(staveColor);
-            stave.addClef("treble").draw();
-            
-            // SEGURANÇA 2: Filtra qualquer possível 'undefined' que tenha entrado no array
-            const staveNotes = currentPhrase
-                .filter(n => n && n.key) 
-                .map((n, i) => {
-                    const sn = new VF.StaveNote({ 
-                        clef: "treble", 
-                        keys: [n.key], 
-                        duration: "q", 
-                        auto_stem: true 
-                    });
-                    if (n.acc) sn.addModifier(new VF.Accidental(n.acc), 0);
-                    
-                    let color;
-                    if (i === activeNoteIndex) color = isDark ? '#a5b4fc' : '#4f46e5'; 
-                    else if (i < activeNoteIndex) color = isDark ? '#34d399' : '#10b981'; 
-                    else color = isDark ? '#475569' : '#e2e8f0'; 
-                    
-                    sn.setStyle({ fillStyle: color, strokeStyle: color });
-                    return sn;
-                });
-
-            // SEGURANÇA 3: Só chama o Formatter se houver notas válidas para formatar
-            if (staveNotes.length > 0) {
-                try {
-                    const voice = new VF.Voice({
-                        num_beats: staveNotes.length, // Usa o tamanho real do array de notas
-                        beat_value: 4
-                    }).addTickables(staveNotes);
-
-                    new VF.Formatter().joinVoices([voice]).format([voice], width - 100);
-                    voice.draw(context, stave);
-                } catch (e) {
-                    console.error("Erro na formatação do VexFlow:", e);
-                }
-            }
-        }
-
-        // Função auxiliar para cor padrão das notas no dark/light
-        function mainNoteColor(isDark) {
-            return isDark ? '#f8fafc' : '#1e293b'; // Branco Gelo / Azul Ardósia Escuro
-        }
-
-        function checkAnswer(guess) {
-            if (gameMode !== 'practice' && !isGameActive) return;
-            const target = currentPhrase[activeNoteIndex].name;
-            const enharmonics = { 'C#': ['C#', 'Db'], 'Db': ['C#', 'Db'], 'D#': ['D#', 'Eb'], 'Eb': ['D#', 'Eb'], 'F#': ['F#', 'Gb'], 'Gb': ['F#', 'Gb'], 'G#': ['G#', 'Ab'], 'Ab': ['G#', 'Ab'], 'A#': ['A#', 'Bb'], 'Bb': ['A#', 'Bb'] };
-            const isCorrect = (guess === target) || (enharmonics[target] && enharmonics[target].includes(guess));
-
-            if (isCorrect) {
-                activeNoteIndex++;
-                if (activeNoteIndex >= currentPhrase.length) {
-                    score++; scoreEl.innerText = score;
-                    gameContainer.classList.add("correct-flash");
-                    setTimeout(() => gameContainer.classList.remove("correct-flash"), 200);
-                    generatePhrase();
-                }
-                renderChallenge();
-            } else {
-                gameContainer.classList.add("wrong-flash");
-                setTimeout(() => gameContainer.classList.remove("wrong-flash"), 300);
-            }
-        }
-
-        // AUDIO & MIC
-        async function setupMic() {
-            try {
-                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtx.state === 'suspended') await audioCtx.resume();
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-                const source = audioCtx.createMediaStreamSource(stream);
-                analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048;
-                source.connect(analyser);
-                dataArray = new Float32Array(analyser.frequencyBinCount);
-                isMicEnabled = true;
-                document.getElementById("micToggle").innerText = "🎤 Microfone Ativo";
-                document.getElementById("detectedNoteContainer").classList.remove("hidden");
-                detectPitch();
-            } catch (err) { console.error(err); alert("Erro ao acessar microfone."); }
-        }
-
-        function detectPitch() {
-            if (!isMicEnabled) return;
-            analyser.getFloatTimeDomainData(dataArray);
-            let rms = 0;
-            for (let i=0; i<dataArray.length; i++) rms += dataArray[i]*dataArray[i];
-            rms = Math.sqrt(rms/dataArray.length);
-            document.getElementById("volMeter").style.width = Math.min(rms * 500, 100) + "%";
-            if (rms > currentThreshold) {
-                const pitch = autoCorrelate(dataArray, audioCtx.sampleRate);
-                if (pitch !== -1) {
-                    const noteName = getNoteFromFreq(pitch);
-                    if (noteName) {
-                        checkAnswer(noteName);
-                        document.getElementById("detectedNoteText").innerText = namingConvention === 'solfege' ? namingMap[noteName] : noteName;
-                    }
-                }
-            }
-            requestAnimationFrame(detectPitch);
-        }
-
-        function autoCorrelate(buf, sampleRate) {
-            let SIZE = buf.length, maxval=-1, maxpos=-1, c = new Array(SIZE).fill(0);
-            for (let i=0; i<SIZE; i++) for (let j=0; j<SIZE-i; j++) c[i] = c[i] + buf[j]*buf[j+i];
-            let d=0; while (c[d]>c[d+1]) d++;
-            for (let i=d; i<SIZE; i++) { if (c[i] > maxval) { maxval = c[i]; maxpos = i; } }
-            return sampleRate/maxpos;
-        }
-
-        function getNoteFromFreq(freq) {
-            const notesScale = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-            const j = Math.round(12 * (Math.log(freq / 440) / Math.log(2))) + 69;
-            return notesScale[j % 12];
-        }
-
-        // TIMERS & GAME LOGIC
-        let timer, timeLeft, survivalTimeout;
-        function startTimer(seconds) {
-            clearInterval(timer); timeLeft = seconds;
-            timer = setInterval(() => { timeLeft--; timerEl.innerText = `${timeLeft}s`; if (timeLeft <= 0) endGame("Fim de Tempo!"); }, 1000);
-        }
-        function startSurvivalTimer() {
-            clearTimeout(survivalTimeout);
-            const bar = document.getElementById("survivalBar");
-            bar.style.width = "100%"; bar.style.transition = "none"; void bar.offsetWidth;
-            bar.style.transition = "width 3s linear"; bar.style.width = "0%";
-            survivalTimeout = setTimeout(() => { if(isGameActive) endGame("Lento!"); }, 3000);
-        }
-        function startGame() {
-            score = 0; scoreEl.innerText = "0"; isGameActive = true;
-            document.getElementById("startBtn").classList.add("hidden");
-            if (gameMode === 'timeAttack') startTimer(60);
-            else if (gameMode === 'survival') { timerEl.innerText = "∞"; document.getElementById("survivalBarContainer").classList.remove("hidden"); }
-            generatePhrase(); renderChallenge();
-        }
-        function endGame(msg) {
-            isGameActive = false; clearInterval(timer); clearTimeout(survivalTimeout);
-            alert(`${msg}\nScore: ${score}`);
-            document.getElementById("startBtn").classList.remove("hidden");
-            document.getElementById("survivalBarContainer").classList.add("hidden");
-        }
-
-        // INIT
-        document.getElementById("toggleSettings").onclick = () => document.getElementById("settingsPanel").classList.add("open");
-        document.getElementById("closeSettings").onclick = () => document.getElementById("settingsPanel").classList.remove("open");
-        document.getElementById("exerciseType").onchange = (e) => { exerciseType = e.target.value; generatePhrase(); renderChallenge(); };
-        document.getElementById("accidentalToggle").onchange = (e) => { includeAccidentals = e.target.checked; initButtons(); generatePhrase(); renderChallenge(); };
-        document.getElementById("namingSelect").onchange = (e) => { namingConvention = e.target.value; initButtons(); renderChallenge(); };
-        document.getElementById("thresholdSlider").oninput = (e) => { currentThreshold = parseFloat(e.target.value); };
-        document.getElementById("micToggle").onclick = () => setupMic();
-        document.getElementById("modeSelect").onchange = (e) => { gameMode = e.target.value; document.getElementById("startBtn").classList.toggle("hidden", gameMode === 'practice'); };
-        document.getElementById("startBtn").onclick = startGame;
-
-        initButtons();
-        generatePhrase();
-        renderChallenge();
-    </script>
 </body>
 </html>
