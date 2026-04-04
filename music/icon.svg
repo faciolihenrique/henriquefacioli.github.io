@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="96" fill="#4f46e5"/>
+
+  <!-- Two connected eighth notes (♫) -->
+  <!-- Left note head -->
+  <ellipse cx="152" cy="340" rx="52" ry="38" transform="rotate(-18 152 340)" fill="white"/>
+  <!-- Right note head -->
+  <ellipse cx="316" cy="300" rx="52" ry="38" transform="rotate(-18 316 300)" fill="white"/>
+
+  <!-- Left stem -->
+  <rect x="196" y="155" width="16" height="196" rx="8" fill="white"/>
+  <!-- Right stem -->
+  <rect x="360" y="115" width="16" height="196" rx="8" fill="white"/>
+
+  <!-- Beam connecting both stems (top) -->
+  <rect x="196" y="155" width="180" height="22" rx="10" fill="white"/>
+  <!-- Second beam -->
+  <rect x="196" y="195" width="180" height="22" rx="10" fill="white"/>
+</svg>
