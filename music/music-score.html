@@ -3,100 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Reader Pro - Phrase Edition</title>
+    <title>Music Reader Pro - Deep Dark Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/cjs/vexflow.js"></script>
+    <script>
+        // Configuração do Tailwind para modo escuro via classe
+        tailwind.config = { darkMode: 'class' }
+    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s ease; }
+        
+        /* Cores de Erro/Acerto Adaptadas para Deep Dark */
         .correct-flash { background-color: #dcfce7 !important; transition: background 0.2s; }
+        .dark .correct-flash { background-color: #064e3b !important; } /* Verde escuro profundo */
+        
         .wrong-flash { background-color: #fee2e2 !important; animation: shake 0.2s ease-in-out 0s 2; }
+        .dark .wrong-flash { background-color: #7f1d1d !important; } /* Vermelho escuro profundo */
+        
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(5px); } 75% { transform: translateX(-5px); } }
         #settingsPanel { transition: transform 0.3s ease-in-out; transform: translateX(100%); }
         #settingsPanel.open { transform: translateX(0); }
         .timer-bar { transition: width 0.1s linear; }
     </style>
 </head>
-<body>
+<body class="bg-slate-50 dark:bg-[#0e0e0f] text-slate-900 dark:text-slate-200 h-screen flex flex-col overflow-hidden">
 
-    <header class="w-full bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shrink-0">
+    <header class="w-full bg-white dark:bg-[#0e0e0f] border-b border-slate-200 dark:border-[#37393b] px-6 py-4 flex justify-between items-center shrink-0 shadow-sm z-10">
         <div class="flex gap-8">
             <div>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pontos</p>
-                <p id="score" class="text-xl font-black text-slate-800">0</p>
+                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-wider">Pontos</p>
+                <p id="score" class="text-xl font-black">0</p>
             </div>
             <div>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tempo</p>
-                <p id="timerDisplay" class="text-xl font-black text-indigo-600">--</p>
+                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-wider">Tempo</p>
+                <p id="timerDisplay" class="text-xl font-black text-indigo-600 dark:text-indigo-400">--</p>
             </div>
         </div>
-        <button id="toggleSettings" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-        </button>
+        <div class="flex items-center gap-2">
+            <button id="themeToggle" class="p-2 hover:bg-slate-100 dark:hover:bg-[#2a2a2a] rounded-full transition-colors text-xl">
+                <span id="themeIcon">🌓</span>
+            </button>
+            <button id="toggleSettings" class="p-2 hover:bg-slate-100 dark:hover:bg-[#2a2a2a] rounded-full transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-slate-600 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </button>
+        </div>
     </header>
 
     <main class="flex-grow flex flex-col items-center justify-center p-6 gap-8">
-        
-        <div id="game-container" class="bg-white p-10 rounded-[3rem] shadow-2xl shadow-slate-200/50 border border-slate-100 flex flex-col items-center justify-center relative w-full max-w-xl min-h-[280px]">
-            <div id="output"></div>
+        <div id="game-container" class="bg-white dark:bg-[#2a2a2a] p-10 rounded-[3rem] shadow-2xl dark:shadow-indigo-950/20 border border-slate-100 dark:border-[#37393b] flex flex-col items-center justify-center relative w-full max-w-xl min-h-[320px] transition-colors overflow-visible">
+            <div id="output" class="flex justify-center w-full"></div>
             
-            <div id="detectedNoteContainer" class="absolute top-6 right-8 hidden bg-indigo-50 px-4 py-1.5 rounded-full border border-indigo-100 flex items-center shadow-sm">
-                <span class="text-[10px] font-bold text-indigo-400 uppercase mr-2">Ouvindo:</span>
-                <span id="detectedNoteText" class="text-sm font-black text-indigo-600 uppercase">--</span>
+            <div id="detectedNoteContainer" class="absolute top-6 right-8 hidden bg-indigo-50 dark:bg-[#37393b] px-4 py-1.5 rounded-full border border-indigo-100 dark:border-indigo-900 flex items-center shadow-sm">
+                <span class="text-[10px] font-bold text-indigo-400 dark:text-indigo-300 uppercase mr-2">Ouvindo:</span>
+                <span id="detectedNoteText" class="text-sm font-black text-indigo-600 dark:text-indigo-400 uppercase">--</span>
             </div>
 
-            <div id="survivalBarContainer" class="absolute bottom-0 left-0 w-full h-3 bg-slate-100 hidden rounded-b-[3rem] overflow-hidden">
-                <div id="survivalBar" class="h-full bg-orange-500 w-full"></div>
+            <div id="survivalBarContainer" class="absolute bottom-0 left-0 w-full h-3 bg-slate-100 dark:bg-[#37393b] hidden rounded-b-[3rem] overflow-hidden">
+                <div id="survivalBar" class="h-full bg-orange-500 w-full timer-bar"></div>
             </div>
         </div>
 
-        <button id="startBtn" class="px-16 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-5 rounded-2xl shadow-xl transition-all hidden">
+        <button id="startBtn" class="px-16 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white font-bold py-5 rounded-2xl shadow-xl transition-all hidden">
             Começar Treino
         </button>
 
         <div id="buttonGrid" class="grid grid-cols-4 md:grid-cols-7 gap-3 w-full max-w-2xl px-4"></div>
     </main>
 
-    <aside id="settingsPanel" class="fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-20 p-8 border-l border-slate-200 overflow-y-auto text-slate-700">
+    <aside id="settingsPanel" class="fixed top-0 right-0 h-full w-80 bg-white dark:bg-[#0e0e0f] shadow-2xl z-20 p-8 border-l border-slate-200 dark:border-[#37393b] overflow-y-auto text-slate-700 dark:text-slate-300">
         <div class="flex justify-between items-center mb-10">
-            <h2 class="text-xl font-bold">Ajustes</h2>
-            <button id="closeSettings" class="text-slate-400 p-2">✕</button>
+            <h2 class="text-xl font-bold dark:text-white">Ajustes</h2>
+            <button id="closeSettings" class="text-slate-400 hover:text-slate-600 p-2 font-bold">✕</button>
         </div>
 
         <div class="space-y-8">
             <section>
                 <label class="text-xs font-bold text-slate-400 uppercase block mb-4 tracking-widest">Exercício</label>
-                <div class="space-y-3">
-                    <label class="text-[10px] text-slate-500 font-bold uppercase">Tipo de Leitura</label>
-                    <select id="exerciseType" class="w-full bg-slate-50 border border-slate-200 text-sm font-bold rounded-xl p-3 outline-none">
-                        <option value="single">Nota Única</option>
-                        <option value="phrase" selected>Frase (4 notas)</option>
-                    </select>
-                </div>
+                <select id="exerciseType" class="w-full bg-slate-50 dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#37393b] text-sm font-bold rounded-xl p-3 outline-none">
+                    <option value="single">Nota Única</option>
+                    <option value="phrase" selected>Frase (4 notas)</option>
+                </select>
             </section>
 
             <section>
                 <label class="text-xs font-bold text-slate-400 uppercase block mb-4 tracking-widest">Áudio</label>
-                <button id="micToggle" class="w-full bg-indigo-50 text-indigo-700 text-sm font-bold py-4 rounded-2xl flex items-center justify-center gap-3 mb-4">
+                <button id="micToggle" class="w-full bg-indigo-50 dark:bg-[#2a2a2a] text-indigo-700 dark:text-indigo-400 text-sm font-bold py-4 rounded-2xl flex items-center justify-center gap-3 mb-4">
                     🎤 Ativar Microfone
                 </button>
-                <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-2">
-                    <div id="volMeter" class="h-full bg-emerald-400 w-0 transition-all"></div>
+                <div class="w-full h-2 bg-slate-100 dark:bg-[#37393b] rounded-full overflow-hidden mb-2">
+                    <div id="volMeter" class="h-full bg-emerald-400 dark:bg-emerald-500 w-0 transition-all"></div>
                 </div>
                 <input type="range" id="thresholdSlider" min="0.001" max="0.1" step="0.001" value="0.01" class="w-full accent-indigo-600">
             </section>
 
             <section>
                 <label class="text-xs font-bold text-slate-400 uppercase block mb-4 tracking-widest">Opções</label>
-                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl mb-4">
+                <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-[#2a2a2a] rounded-2xl mb-4">
                     <span class="text-sm font-bold">Acidentes (#/b)</span>
                     <input type="checkbox" id="accidentalToggle" class="w-5 h-5 accent-indigo-600">
                 </div>
-                <select id="namingSelect" class="w-full bg-slate-50 border border-slate-200 text-sm font-bold rounded-xl p-3 mb-4">
+                <select id="namingSelect" class="w-full bg-slate-50 dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#37393b] text-sm font-bold rounded-xl p-3 mb-4">
                     <option value="letters">C, D, E...</option>
                     <option value="solfege" selected>Dó, Ré, Mi...</option>
                 </select>
-                <select id="modeSelect" class="w-full bg-slate-50 border border-slate-200 text-sm font-bold rounded-xl p-3">
+                <select id="modeSelect" class="w-full bg-slate-50 dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#37393b] text-sm font-bold rounded-xl p-3">
                     <option value="practice">Prática Livre</option>
                     <option value="timeAttack">Time Attack (60s)</option>
                     <option value="survival">Survival (3s)</option>
@@ -130,12 +141,40 @@
         const scoreEl = document.getElementById("score"), timerEl = document.getElementById("timerDisplay"), buttonGrid = document.getElementById("buttonGrid");
         const gameContainer = document.getElementById("game-container");
 
+        // --- THEME LOGIC (Deep Dark) ---
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        
+        function applyTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                themeIcon.innerText = '☀️';
+            } else {
+                document.documentElement.classList.remove('dark');
+                themeIcon.innerText = '🌙';
+            }
+            renderChallenge(); // Redesenha com novas cores
+        }
+
+        const savedTheme = localStorage.getItem('theme');
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        if (savedTheme) applyTheme(savedTheme);
+        else if (systemDark) applyTheme('dark');
+
+        themeToggle.onclick = () => {
+            const isDark = document.documentElement.classList.contains('dark');
+            const newTheme = isDark ? 'light' : 'dark';
+            localStorage.setItem('theme', newTheme);
+            applyTheme(newTheme);
+        };
+
         function initButtons() {
             buttonGrid.innerHTML = "";
             const list = includeAccidentals ? ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] : ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
             list.forEach(n => {
                 const btn = document.createElement("button");
-                btn.className = "bg-white border-2 border-slate-100 hover:border-indigo-500 hover:text-indigo-600 text-slate-700 py-4 rounded-2xl text-sm font-bold transition-all active:scale-95 shadow-sm";
+                btn.className = "bg-white dark:bg-[#2a2a2a] border-2 border-slate-100 dark:border-[#37393b] hover:border-indigo-500 hover:text-indigo-600 text-slate-700 dark:text-slate-200 py-4 rounded-2xl text-sm font-bold transition-all active:scale-95 shadow-sm";
                 btn.innerText = namingConvention === 'solfege' ? namingMap[n] : n;
                 btn.onclick = () => checkAnswer(n);
                 buttonGrid.appendChild(btn);
@@ -151,65 +190,79 @@
 
         function renderChallenge() {
             const output = document.getElementById("output");
+            if (!output) return;
             output.innerHTML = "";
             
-            // 1. Criar o Renderer com altura suficiente para notas agudas e graves
+            // SEGURANÇA 1: Garante que a frase exista antes de tentar mapear as notas
+            if (!currentPhrase || currentPhrase.length === 0) {
+                generatePhrase();
+            }
+
+            const isDark = document.documentElement.classList.contains('dark');
             const renderer = new VF.Renderer(output, VF.Renderer.Backends.SVG);
             const width = exerciseType === 'phrase' ? 450 : 250;
-            const height = 200; // Altura aumentada
-            renderer.resize(width, height);
-            
+            renderer.resize(width, 200);
             const context = renderer.getContext();
             
-            // 2. Posicionar a pauta (Stave) no centro vertical do SVG (y: 60)
-            // Isso dá espaço para notas que sobem ou descem muito
+            const staveColor = isDark ? '#64748b' : '#cbd5e1';
             const stave = new VF.Stave(10, 60, width - 20);
-            stave.addClef("treble").setContext(context).draw();
+            stave.setContext(context);
+            stave.getContext().setStrokeStyle(staveColor);
+            stave.getContext().setFillStyle(staveColor);
+            stave.addClef("treble").draw();
             
-            const staveNotes = currentPhrase.map((n, i) => {
-                // O VexFlow 4+ cuida das linhas suplementares automaticamente
-                const sn = new VF.StaveNote({ 
-                    clef: "treble", 
-                    keys: [n.key], 
-                    duration: "q",
-                    auto_stem: true // Ajusta a haste da nota para cima ou baixo automaticamente
+            // SEGURANÇA 2: Filtra qualquer possível 'undefined' que tenha entrado no array
+            const staveNotes = currentPhrase
+                .filter(n => n && n.key) 
+                .map((n, i) => {
+                    const sn = new VF.StaveNote({ 
+                        clef: "treble", 
+                        keys: [n.key], 
+                        duration: "q", 
+                        auto_stem: true 
+                    });
+                    if (n.acc) sn.addModifier(new VF.Accidental(n.acc), 0);
+                    
+                    let color;
+                    if (i === activeNoteIndex) color = isDark ? '#a5b4fc' : '#4f46e5'; 
+                    else if (i < activeNoteIndex) color = isDark ? '#34d399' : '#10b981'; 
+                    else color = isDark ? '#475569' : '#e2e8f0'; 
+                    
+                    sn.setStyle({ fillStyle: color, strokeStyle: color });
+                    return sn;
                 });
 
-                if (n.acc) sn.addModifier(new VF.Accidental(n.acc), 0);
-                
-                // Cores baseadas no progresso
-                let color = "#cbd5e1"; // Próximas (cinza)
-                if (i === activeNoteIndex) color = "#4f46e5"; // Atual (azul)
-                if (i < activeNoteIndex) color = "#10b981"; // Acertadas (verde)
-                
-                sn.setStyle({ fillStyle: color, strokeStyle: color });
-                return sn;
-            });
+            // SEGURANÇA 3: Só chama o Formatter se houver notas válidas para formatar
+            if (staveNotes.length > 0) {
+                try {
+                    const voice = new VF.Voice({
+                        num_beats: staveNotes.length, // Usa o tamanho real do array de notas
+                        beat_value: 4
+                    }).addTickables(staveNotes);
 
-            // 3. Criar a voz e formatar
-            const voice = new VF.Voice({num_beats: currentPhrase.length, beat_value: 4});
-            voice.addTickables(staveNotes);
-            
-            // O Formatter é essencial para que as linhas suplementares e o espaçamento funcionem
-            new VF.Formatter().joinVoices([voice]).format([voice], width - 100);
-            voice.draw(context, stave);
-            
-            if (gameMode === 'survival' && isGameActive) startSurvivalTimer();
+                    new VF.Formatter().joinVoices([voice]).format([voice], width - 100);
+                    voice.draw(context, stave);
+                } catch (e) {
+                    console.error("Erro na formatação do VexFlow:", e);
+                }
+            }
+        }
+
+        // Função auxiliar para cor padrão das notas no dark/light
+        function mainNoteColor(isDark) {
+            return isDark ? '#f8fafc' : '#1e293b'; // Branco Gelo / Azul Ardósia Escuro
         }
 
         function checkAnswer(guess) {
             if (gameMode !== 'practice' && !isGameActive) return;
-            
             const target = currentPhrase[activeNoteIndex].name;
             const enharmonics = { 'C#': ['C#', 'Db'], 'Db': ['C#', 'Db'], 'D#': ['D#', 'Eb'], 'Eb': ['D#', 'Eb'], 'F#': ['F#', 'Gb'], 'Gb': ['F#', 'Gb'], 'G#': ['G#', 'Ab'], 'Ab': ['G#', 'Ab'], 'A#': ['A#', 'Bb'], 'Bb': ['A#', 'Bb'] };
-            
             const isCorrect = (guess === target) || (enharmonics[target] && enharmonics[target].includes(guess));
 
             if (isCorrect) {
                 activeNoteIndex++;
                 if (activeNoteIndex >= currentPhrase.length) {
-                    score++;
-                    scoreEl.innerText = score;
+                    score++; scoreEl.innerText = score;
                     gameContainer.classList.add("correct-flash");
                     setTimeout(() => gameContainer.classList.remove("correct-flash"), 200);
                     generatePhrase();
@@ -221,58 +274,21 @@
             }
         }
 
-        // AUDIO LOGIC (Monophonic sequence detection)
+        // AUDIO & MIC
         async function setupMic() {
             try {
-                // 1. Criar ou retomar o contexto de áudio
-                if (!audioCtx) {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                
-                // Se o contexto estiver suspenso (comum em navegadores modernos), acorda ele
-                if (audioCtx.state === 'suspended') {
-                    await audioCtx.resume();
-                }
-
-                console.log("Solicitando acesso ao microfone...");
-                
-                // 2. Tentar capturar o áudio
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: {
-                        echoCancellation: false, // Melhora a detecção de instrumentos
-                        noiseSuppression: false,
-                        autoGainControl: false
-                    } 
-                });
-
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') await audioCtx.resume();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
                 const source = audioCtx.createMediaStreamSource(stream);
-                analyser = audioCtx.createAnalyser();
-                analyser.fftSize = 2048;
+                analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048;
                 source.connect(analyser);
                 dataArray = new Float32Array(analyser.frequencyBinCount);
-                
                 isMicEnabled = true;
-                document.getElementById("micStatusText").innerText = "On-line";
-                document.getElementById("micStatusIcon").classList.add("mic-active");
+                document.getElementById("micToggle").innerText = "🎤 Microfone Ativo";
                 document.getElementById("detectedNoteContainer").classList.remove("hidden");
-                
-                console.log("Microfone ativado com sucesso!");
                 detectPitch();
-
-            } catch (err) {
-                // Debug detalhado no console
-                console.error("Erro detalhado do microfone:", err);
-                
-                if (err.name === 'NotAllowedError') {
-                    alert("Erro: Você bloqueou o microfone no navegador. Clique no cadeado ao lado da URL e limpe as permissões.");
-                } else if (err.name === 'NotFoundError') {
-                    alert("Erro: Nenhum microfone foi encontrado no seu dispositivo.");
-                } else if (err.name === 'NotReadableError') {
-                    alert("Erro: O microfone já está sendo usado por outro aplicativo (Zoom, Meet, etc).");
-                } else {
-                    alert("Erro ao acessar microfone: " + err.message);
-                }
-            }
+            } catch (err) { console.error(err); alert("Erro ao acessar microfone."); }
         }
 
         function detectPitch() {
@@ -282,7 +298,6 @@
             for (let i=0; i<dataArray.length; i++) rms += dataArray[i]*dataArray[i];
             rms = Math.sqrt(rms/dataArray.length);
             document.getElementById("volMeter").style.width = Math.min(rms * 500, 100) + "%";
-            
             if (rms > currentThreshold) {
                 const pitch = autoCorrelate(dataArray, audioCtx.sampleRate);
                 if (pitch !== -1) {
@@ -310,7 +325,7 @@
             return notesScale[j % 12];
         }
 
-        // GAME TIMERS
+        // TIMERS & GAME LOGIC
         let timer, timeLeft, survivalTimeout;
         function startTimer(seconds) {
             clearInterval(timer); timeLeft = seconds;
@@ -337,14 +352,14 @@
             document.getElementById("survivalBarContainer").classList.add("hidden");
         }
 
-        // LISTENERS
+        // INIT
         document.getElementById("toggleSettings").onclick = () => document.getElementById("settingsPanel").classList.add("open");
         document.getElementById("closeSettings").onclick = () => document.getElementById("settingsPanel").classList.remove("open");
         document.getElementById("exerciseType").onchange = (e) => { exerciseType = e.target.value; generatePhrase(); renderChallenge(); };
         document.getElementById("accidentalToggle").onchange = (e) => { includeAccidentals = e.target.checked; initButtons(); generatePhrase(); renderChallenge(); };
         document.getElementById("namingSelect").onchange = (e) => { namingConvention = e.target.value; initButtons(); renderChallenge(); };
         document.getElementById("thresholdSlider").oninput = (e) => { currentThreshold = parseFloat(e.target.value); };
-        document.getElementById("micToggle").onclick = () => { if(!isMicEnabled) setupMic(); };
+        document.getElementById("micToggle").onclick = () => setupMic();
         document.getElementById("modeSelect").onchange = (e) => { gameMode = e.target.value; document.getElementById("startBtn").classList.toggle("hidden", gameMode === 'practice'); };
         document.getElementById("startBtn").onclick = startGame;
 
