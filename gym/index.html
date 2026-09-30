@@ -1,0 +1,2769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#121417">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Workout Tracker</title>
+  
+  <!-- Typography: Manrope + Source Sans 3 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+  
+  <!-- Early Theme Boot Script to prevent flashing -->
+  <script>
+    (function() {
+      try {
+        var pref = localStorage.getItem('my_gym_theme_preference') || 'system';
+        var isDark = pref === 'dark' || (pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme-preference', pref);
+      } catch (e) {}
+    })();
+  </script>
+
+  <style>
+/* Design System Baseline: Neutral Off-white, Graphite, Restrained Blue Accents */
+
+:root, [data-theme="light"] {
+  --bg-canvas: #F7F8FA;
+  --bg-surface: #FFFFFF;
+  --bg-surface-raised: #EDF0F4;
+  --bg-surface-selected: #EAF0FF;
+  --text-primary: #20242B;
+  --text-secondary: #596273;
+  --border-subtle: #DCE1E8;
+  --border-control: #7D8796;
+  --primary: #315DCE;
+  --primary-hover: #284FB5;
+  --primary-pressed: #204299;
+  --on-primary: #FFFFFF;
+  --focus: #315DCE;
+  --success: #26704B;
+  --warning: #865C00;
+  --error: #B52D41;
+  --info: #405D89;
+  --surface-container-high: #EDF0F4;
+  --on-surface-variant: #596273;
+  --shadow-overlay: 0 12px 32px rgba(18, 20, 23, 0.12);
+  --scrim: rgba(18, 20, 23, 0.4);
+}
+
+[data-theme="dark"] {
+  --bg-canvas: #121417;
+  --bg-surface: #1B1E23;
+  --bg-surface-raised: #252A31;
+  --bg-surface-selected: #202F4A;
+  --text-primary: #F3F5F7;
+  --text-secondary: #B2BBC8;
+  --surface-container-high: #252A31;
+  --on-surface-variant: #B2BBC8;
+  --border-subtle: #373E49;
+  --border-control: #7C8797;
+  --primary: #91B2FF;
+  --primary-hover: #AAC3FF;
+  --primary-pressed: #799DF2;
+  --on-primary: #101B33;
+  --focus: #91B2FF;
+  --success: #85D6AA;
+  --warning: #E9C46E;
+  --error: #FFA5B2;
+  --info: #ACBDD8;
+  --shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.32);
+  --scrim: rgba(0, 0, 0, 0.6);
+}
+
+:root {
+  --font-display: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --radius-btn: 12px;
+  --radius-card: 16px;
+  --radius-sheet: 24px;
+  --radius-pill: 9999px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  min-height: 100vh;
+  padding-bottom: 96px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Header */
+header.app-header {
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.app-brand {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Main Container */
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* Persistent Active Session Banner */
+.active-session-banner {
+  background: var(--bg-surface-raised);
+  border-bottom: 2px solid var(--primary);
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.active-session-banner-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.active-session-banner-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.active-session-banner-meta {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 400;
+  cursor: pointer;
+  padding: 6px 12px;
+  min-width: 64px;
+  min-height: 48px;
+  transition: color 120ms ease;
+}
+
+.nav-item:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-btn);
+}
+
+.nav-item.active {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.nav-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+/* Typography Hierarchy */
+.page-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 2.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.exercise-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.body-text {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  color: var(--text-primary);
+}
+
+.metadata-text {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--text-secondary);
+}
+
+/* Cards */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.card-raised {
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  border-radius: var(--radius-btn);
+  padding: 10px 20px;
+  min-height: 48px;
+  cursor: pointer;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transform: scale(1);
+  box-shadow: 0 1px 2px rgba(18, 20, 23, 0.04);
+  transition: transform 160ms ease-out, background-color 120ms ease, color 120ms ease, border-color 120ms ease, box-shadow 160ms ease-out;
+  user-select: none;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+  box-shadow: none;
+  transition: transform 70ms ease-out;
+}
+
+.btn:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: var(--on-primary);
+  border-color: var(--primary);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.btn-primary:active:not(:disabled) {
+  background-color: var(--primary-pressed);
+  border-color: var(--primary-pressed);
+}
+
+.btn-training-primary {
+  min-height: 56px;
+  font-size: 1.125rem;
+  width: 100%;
+}
+
+.btn-secondary {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-control);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--bg-surface-raised);
+}
+
+.btn-secondary:active:not(:disabled) {
+  background-color: var(--bg-surface-raised);
+  border: 2px solid var(--border-control);
+}
+
+.btn-quiet {
+  background-color: transparent;
+  color: var(--text-primary);
+  border: 1px solid transparent;
+}
+
+.btn-quiet:hover:not(:disabled) {
+  background-color: var(--bg-surface-raised);
+}
+
+.btn-destructive {
+  background-color: var(--bg-surface);
+  color: var(--error);
+  border: 1px solid var(--error);
+}
+
+.btn-destructive:hover:not(:disabled) {
+  background-color: var(--bg-surface-raised);
+}
+
+.btn-icon {
+  width: 48px;
+  height: 48px;
+  min-height: 48px;
+  padding: 0;
+  border-radius: var(--radius-btn);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-size: 1.25rem;
+}
+
+.btn-icon:hover:not(:disabled) {
+  border-color: var(--border-control);
+}
+
+.btn:disabled {
+  background-color: var(--bg-surface-raised) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border-subtle) !important;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.btn-sm {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 0.875rem;
+}
+
+/* Form Inputs */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.form-input {
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 16px;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--text-primary);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-btn);
+  transition: border-color 120ms ease;
+}
+
+.form-input:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-color: var(--focus);
+}
+
+.form-input::placeholder {
+  color: var(--text-secondary);
+}
+
+/* Status Chips */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: var(--bg-surface-raised);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+}
+
+.chip-success {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.chip-warning {
+  color: var(--warning);
+  border-color: var(--warning);
+}
+
+.chip-primary {
+  background-color: var(--primary);
+  color: var(--on-primary);
+  border-color: var(--primary);
+}
+
+/* Segmented Choice */
+.segmented-control {
+  display: flex;
+  background: var(--bg-surface-raised);
+  border-radius: var(--radius-btn);
+  padding: 4px;
+  gap: 4px;
+  border: 1px solid var(--border-subtle);
+}
+
+.segmented-option {
+  flex: 1;
+  text-align: center;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  transition: background-color 120ms, color 120ms;
+}
+
+.segmented-option.active {
+  background: var(--bg-surface-selected);
+  color: var(--primary);
+  border: 2px solid var(--primary);
+}
+
+/* Active Session: Focused Current-Set Panel */
+.active-set-panel {
+  background: var(--bg-surface);
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-card);
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+
+.set-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.set-panel-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.5px;
+}
+
+.numeric-entry-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.numeric-entry-box {
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-btn);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.numeric-entry-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.numeric-value-container {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.numeric-value-input {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  line-height: 3rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  width: 90px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.numeric-value-input:focus {
+  outline: 2px solid var(--focus);
+  border-radius: 6px;
+}
+
+.numeric-unit {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.stepper-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.stepper-btn {
+  flex: 1;
+  min-height: 48px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-btn);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: scale(1);
+  transition: transform 160ms ease-out, background-color 120ms ease;
+  user-select: none;
+}
+
+.stepper-btn:active {
+  background: var(--bg-surface-raised);
+  transform: scale(0.95);
+  transition: transform 70ms ease-out;
+}
+
+/* Compact Set Outline */
+.set-outline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.set-outline-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: var(--radius-btn);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.95rem;
+}
+
+.set-outline-row.current {
+  border-color: var(--primary);
+  background: var(--bg-surface-raised);
+  font-weight: 600;
+}
+
+.set-outline-row.recorded {
+  opacity: 0.9;
+}
+
+.set-outline-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Benchmark ("Last Time") Card */
+.benchmark-card {
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-btn);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.benchmark-card-header {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  justify-content: space-between;
+}
+
+.benchmark-card-val {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rest Timer Panel */
+.rest-panel {
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.rest-time-display {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.rest-controls {
+  display: flex;
+  gap: 8px;
+}
+
+/* Modal / Sheet Overlays */
+.modal-overlay,
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--scrim);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  z-index: 200;
+  animation: fadeIn 150ms ease;
+}
+
+@media (min-width: 640px) {
+  .modal-overlay,
+  .modal-backdrop {
+    align-items: center;
+  }
+}
+
+.modal-sheet,
+.modal-card {
+  background: var(--bg-surface-raised);
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  width: 100%;
+  max-width: 580px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+  box-shadow: var(--shadow-overlay);
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 640px) {
+  .modal-sheet,
+  .modal-card {
+    border-radius: var(--radius-sheet);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h3,
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes sheetSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-sheet,
+.modal-card {
+  animation: sheetSlideUp 220ms ease-out;
+}
+
+/* Settings Modal & Status Pill */
+.settings-section h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.theme-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.status-pill.status-idle {
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+}
+
+.status-pill.status-loading {
+  background: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+}
+
+.status-pill.status-success {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.status-pill.status-error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+@keyframes recordHighlight {
+  0% {
+    box-shadow: 0 0 0 2px var(--success);
+    background-color: var(--bg-surface-selected);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    background-color: var(--bg-surface);
+  }
+}
+
+.set-outline-row.just-recorded {
+  animation: recordHighlight 450ms ease-out;
+}
+
+@keyframes valueHighlight {
+  0% {
+    background-color: var(--bg-surface-selected);
+  }
+  100% {
+    background-color: var(--bg-surface-raised);
+  }
+}
+
+.numeric-entry-box.value-changed {
+  animation: valueHighlight 400ms ease-out;
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+}
+
+</style>
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <meta name="apple-mobile-web-app-title" content="My Gym">
+  
+</head>
+<body>
+  <!-- Top App Header -->
+  <header class="app-header">
+    <a href="#" class="app-brand" id="brand-home">
+      <span>⚡</span>
+      <span>Workout Tracker</span>
+    </a>
+    <div class="header-actions">
+      <button class="btn btn-quiet btn-sm" id="btn-open-settings" aria-label="Open Settings" style="padding: 6px 10px; font-size: 1.1rem;">
+        ⚙️
+      </button>
+    </div>
+  </header>
+
+  <!-- Persistent Active Session Resume Banner -->
+  <div id="active-session-banner" class="active-session-banner" style="display: none;">
+    <div class="active-session-banner-info">
+      <div id="banner-workout-name" class="active-session-banner-title">Upper Body 1</div>
+      <div id="banner-workout-meta" class="active-session-banner-meta">Active now · 3 sets completed</div>
+    </div>
+    <button class="btn btn-sm btn-primary" id="btn-banner-resume">Resume</button>
+  </div>
+
+  <!-- Main View Container -->
+  <main id="app-root" class="container"></main>
+
+  <!-- Modal / Dialog Container -->
+  <div id="modal-container"></div>
+
+  <!-- Bottom Navigation: Today · Workouts · Progress -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="today" id="nav-today">
+      <span class="nav-icon">⚡</span>
+      <span>Today</span>
+    </button>
+    <button class="nav-item" data-tab="workouts" id="nav-workouts">
+      <span class="nav-icon">🏋️</span>
+      <span>Workouts</span>
+    </button>
+    <button class="nav-item" data-tab="progress" id="nav-progress">
+      <span class="nav-icon">📊</span>
+      <span>Progress</span>
+    </button>
+  </nav>
+
+  <script>
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js', { scope: './' })
+          .then(reg => console.log('PWA ServiceWorker registered with scope:', reg.scope))
+          .catch(err => console.warn('PWA ServiceWorker registration failed:', err));
+      });
+    }
+  
+(() => {
+  // src/client/transport.js
+  var STORAGE_QUEUE_KEY = "workout_app_pending_mutations";
+  var STORAGE_GAS_URL_KEY = "workout_app_gas_url";
+  var STORAGE_API_TOKEN_KEY = "workout_app_api_token";
+  var Transport = class {
+    constructor(options = {}) {
+      this.storage = options.storage || (typeof localStorage !== "undefined" ? localStorage : null);
+      this.fetchFn = options.fetchFn || (typeof fetch !== "undefined" ? typeof window !== "undefined" ? fetch.bind(window) : fetch.bind(globalThis) : null);
+      this.isGas = options.isGas !== void 0 ? options.isGas : typeof window !== "undefined" && Boolean(window.google?.script?.run);
+      this.isLocalDev = options.isLocalDev !== void 0 ? options.isLocalDev : typeof window !== "undefined" && window.location?.hostname === "localhost";
+    }
+    getRemoteConfig() {
+      return {
+        gasUrl: this.storage?.getItem(STORAGE_GAS_URL_KEY) || "",
+        apiToken: this.storage?.getItem(STORAGE_API_TOKEN_KEY) || ""
+      };
+    }
+    setRemoteConfig({ gasUrl, apiToken } = {}) {
+      if (gasUrl !== void 0) {
+        const trimmedUrl = typeof gasUrl === "string" ? gasUrl.trim() : "";
+        if (trimmedUrl) this.storage?.setItem(STORAGE_GAS_URL_KEY, trimmedUrl);
+        else this.storage?.removeItem(STORAGE_GAS_URL_KEY);
+      }
+      if (apiToken !== void 0) {
+        const trimmedToken = typeof apiToken === "string" ? apiToken.trim() : "";
+        if (trimmedToken) this.storage?.setItem(STORAGE_API_TOKEN_KEY, trimmedToken);
+        else this.storage?.removeItem(STORAGE_API_TOKEN_KEY);
+      }
+    }
+    getPendingQueue() {
+      try {
+        const raw = this.storage?.getItem(STORAGE_QUEUE_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    }
+    savePendingQueue(queue) {
+      try {
+        this.storage?.setItem(STORAGE_QUEUE_KEY, JSON.stringify(queue));
+      } catch (e) {
+        console.warn("Failed to save mutation queue to localStorage:", e);
+      }
+    }
+    enqueueMutation(mutation) {
+      const queue = this.getPendingQueue();
+      queue.push({
+        ...mutation,
+        enqueuedAt: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      this.savePendingQueue(queue);
+    }
+    removeMutation(requestId) {
+      const queue = this.getPendingQueue().filter((m) => m.requestId !== requestId);
+      this.savePendingQueue(queue);
+    }
+    async send(action, payload = {}) {
+      const requestId = "req_" + Math.random().toString(36).substring(2, 10);
+      const { gasUrl, apiToken } = this.getRemoteConfig();
+      const command = { action, payload, token: apiToken || void 0, requestId };
+      if (this.isGas) {
+        return new Promise((resolve, reject) => {
+          window.google.script.run.withSuccessHandler((res) => {
+            if (res && res.success) resolve(res.data);
+            else reject(new Error(res?.error?.message || "Server error"));
+          }).withFailureHandler((err) => {
+            reject(new Error(err?.message || "Apps Script network error"));
+          }).dispatch(command);
+        });
+      }
+      if (gasUrl) {
+        const response = await this.fetchFn(gasUrl, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(command)
+        });
+        const res = await response.json();
+        if (res.success) return res.data;
+        throw new Error(res.error?.message || "Apps Script API error");
+      }
+      if (this.isLocalDev) {
+        const response = await this.fetchFn("/api/dispatch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(command)
+        });
+        const res = await response.json();
+        if (res.success) return res.data;
+        throw new Error(res.error?.message || "Dev server error");
+      }
+      throw new Error("No backend connection configured. Please set your Apps Script URL in Settings.");
+    }
+    async testConnection() {
+      return this.send("init", {});
+    }
+    async sendOptimisticSet(sessionId, setData) {
+      const requestId = "set_req_" + Math.random().toString(36).substring(2, 10);
+      const mutation = {
+        action: "logSet",
+        payload: { sessionId, ...setData },
+        requestId
+      };
+      this.enqueueMutation(mutation);
+      this.send(mutation.action, mutation.payload).then(() => {
+        this.removeMutation(requestId);
+      }).catch((err) => {
+        console.warn("Background set sync failed, retained in queue:", err);
+      });
+      return { optimistic: true, requestId };
+    }
+    async drainQueue() {
+      const queue = this.getPendingQueue();
+      if (queue.length === 0) return;
+      for (const item of [...queue]) {
+        try {
+          await this.send(item.action, item.payload);
+          this.removeMutation(item.requestId);
+        } catch (err) {
+          console.warn("Failed to drain mutation:", item.requestId, err);
+          break;
+        }
+      }
+    }
+  };
+  var transport = new Transport();
+
+  // src/client/theme.js
+  var STORAGE_KEY = "my_gym_theme_preference";
+  var ThemeManager = class {
+    constructor() {
+      this.mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      this.preference = this.loadPreference();
+      this.mediaQuery.addEventListener("change", () => {
+        if (this.preference === "system") {
+          this.applyTheme();
+        }
+      });
+      this.applyTheme();
+    }
+    loadPreference() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved === "light" || saved === "dark" || saved === "system") {
+        return saved;
+      }
+      return "system";
+    }
+    getPreference() {
+      return this.preference;
+    }
+    getResolvedTheme() {
+      if (this.preference === "system") {
+        return this.mediaQuery.matches ? "dark" : "light";
+      }
+      return this.preference;
+    }
+    setPreference(pref) {
+      if (pref !== "system" && pref !== "light" && pref !== "dark") return;
+      this.preference = pref;
+      localStorage.setItem(STORAGE_KEY, pref);
+      this.applyTheme();
+    }
+    applyTheme() {
+      const resolved = this.getResolvedTheme();
+      document.documentElement.setAttribute("data-theme", resolved);
+      document.documentElement.setAttribute("data-theme-preference", this.preference);
+      const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+      if (themeColorMeta) {
+        themeColorMeta.setAttribute("content", resolved === "dark" ? "#121417" : "#F7F8FA");
+      }
+    }
+  };
+  var themeManager = new ThemeManager();
+
+  // src/client/views/today.js
+  var TodayView = class {
+    constructor(app2) {
+      this.app = app2;
+    }
+    render() {
+      const today = /* @__PURE__ */ new Date();
+      const dateFormatted = today.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "short",
+        day: "numeric"
+      });
+      const activeSession = this.app.activeSession;
+      const workouts = this.app.workouts || [];
+      const history = this.app.history || [];
+      const upNextWorkout = workouts.length > 0 ? workouts[0] : null;
+      const recentSessions = history.slice(0, 3);
+      return `
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- Orientation / Date -->
+        <div>
+          <div class="metadata-text" style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${dateFormatted}</div>
+          <h1 class="page-title" style="margin-top: 2px;">Today</h1>
+        </div>
+
+        ${activeSession ? this.renderActiveSessionCard(activeSession) : this.renderUpNextCard(upNextWorkout)}
+
+        <!-- Quick Start Workouts -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h2 class="section-title" style="margin-bottom: 0;">Workouts</h2>
+            <button class="btn btn-quiet btn-sm" id="btn-today-view-all-workouts">View all \u2192</button>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            ${workouts.map((w) => `
+              <div class="card" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; margin-bottom: 0;">
+                <div>
+                  <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary);">${w.name}</h3>
+                  <div class="metadata-text">
+                    ${w.positions ? w.positions.length : 0} exercises ${w.weekdayLabel ? `\xB7 ${w.weekdayLabel}` : ""}
+                  </div>
+                </div>
+                <button class="btn btn-primary btn-sm btn-start-workout" data-workout-id="${w.id}">
+                  Start
+                </button>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        ${recentSessions.length > 0 ? `
+          <div style="margin-top: 8px;">
+            <h2 class="section-title">Recent Activity</h2>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              ${recentSessions.map((s) => {
+        const sDate = new Date(s.completedAt || s.startedAt).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric"
+        });
+        return `
+                  <div class="card-raised" style="padding: 14px 18px; margin-bottom: 0; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                      <div style="font-weight: 600; color: var(--text-primary);">${s.workoutName}</div>
+                      <div class="metadata-text">${sDate} \xB7 ${s.progress?.totalWorkingSets || 0} working sets completed</div>
+                    </div>
+                    <span class="chip chip-success" style="font-size: 0.75rem;">Done</span>
+                  </div>
+                `;
+      }).join("")}
+            </div>
+          </div>
+        ` : ""}
+      </div>
+    `;
+    }
+    renderActiveSessionCard(session) {
+      const started = session.startedAt ? new Date(session.startedAt) : null;
+      const isValidDate = started && !isNaN(started.getTime());
+      const timeFormatted = isValidDate ? started.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "recently";
+      const workoutTitle = session.workoutName || session.plan?.workoutName || "Workout Session";
+      const completedSets = session.setLogs?.filter((s) => !s.isWarmup && !s.voidedAt)?.length || 0;
+      return `
+      <div class="card" style="border: 2px solid var(--primary); background: var(--bg-surface-raised);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span class="chip chip-primary">Session in Progress</span>
+          <span class="metadata-text">Started ${timeFormatted}</span>
+        </div>
+        <h2 style="font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; margin-bottom: 4px;">
+          ${workoutTitle}
+        </h2>
+        <p class="metadata-text" style="margin-bottom: 16px;">
+          ${completedSets} working sets recorded so far
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <button class="btn btn-primary btn-training-primary" id="btn-today-resume">
+            Resume session
+          </button>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" style="flex: 1;" id="btn-today-finish">
+              Review and finish
+            </button>
+            <button class="btn btn-destructive" style="padding: 10px 14px;" id="btn-today-discard" title="Discard session">
+              Discard
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    }
+    renderUpNextCard(workout) {
+      if (!workout) {
+        return `
+        <div class="card" style="text-align: center; padding: 32px 20px;">
+          <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">Welcome! Ready to train?</h2>
+          <p class="metadata-text" style="margin-bottom: 16px;">Create your first workout or explore default templates.</p>
+          <button class="btn btn-primary" id="btn-today-create-workout">Create workout</button>
+        </div>
+      `;
+      }
+      return `
+      <div class="card" style="border: 1px solid var(--border-control);">
+        <div class="metadata-text" style="font-weight: 600; color: var(--primary); margin-bottom: 4px;">
+          UP NEXT
+        </div>
+        <h2 style="font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; margin-bottom: 6px;">
+          ${workout.name}
+        </h2>
+        <div class="metadata-text" style="margin-bottom: 16px;">
+          ${workout.positions ? workout.positions.length : 0} exercises planned
+          ${workout.weekdayLabel ? `\xB7 Recommended for ${workout.weekdayLabel}` : ""}
+        </div>
+
+        <button class="btn btn-primary btn-training-primary btn-start-workout" data-workout-id="${workout.id}">
+          Start workout
+        </button>
+      </div>
+    `;
+    }
+    attachEvents(container) {
+      container.querySelector("#btn-today-resume")?.addEventListener("click", () => {
+        this.app.setActiveTab("session");
+      });
+      container.querySelector("#btn-today-finish")?.addEventListener("click", () => {
+        this.app.openFinishModal();
+      });
+      container.querySelector("#btn-today-discard")?.addEventListener("click", async () => {
+        if (confirm("Are you sure you want to discard this session? All recorded sets will be lost.")) {
+          await this.app.discardActiveSession();
+        }
+      });
+      container.querySelectorAll(".btn-start-workout").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const workoutId = btn.dataset.workoutId;
+          await this.app.startWorkout(workoutId);
+        });
+      });
+      container.querySelector("#btn-today-view-all-workouts")?.addEventListener("click", () => {
+        this.app.setActiveTab("workouts");
+      });
+      container.querySelector("#btn-today-create-workout")?.addEventListener("click", () => {
+        this.app.setActiveTab("workouts");
+        this.app.openCreateWorkoutModal();
+      });
+    }
+  };
+
+  // src/client/views/workouts.js
+  var WorkoutsView = class {
+    constructor(app2) {
+      this.app = app2;
+    }
+    render() {
+      const workouts = this.app.workouts || [];
+      return `
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div class="metadata-text" style="font-weight: 600; text-transform: uppercase;">Library</div>
+            <h1 class="page-title" style="margin-top: 2px;">Workouts</h1>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-create-workout">+ New Workout</button>
+        </div>
+
+        <!-- Workouts list -->
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          ${workouts.map((w) => {
+        const posCount = w.positions ? w.positions.length : 0;
+        return `
+              <div class="card" style="margin-bottom: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                  <div>
+                    <h2 style="font-family: var(--font-display); font-size: 1.35rem; font-weight: 700; color: var(--text-primary); margin-bottom: 2px;">
+                      ${w.name}
+                    </h2>
+                    <div class="metadata-text">
+                      ${posCount} exercises ${w.weekdayLabel ? `\xB7 ${w.weekdayLabel}` : ""}
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <button class="btn btn-primary btn-sm btn-start-wk" data-id="${w.id}">
+                    Start Workout
+                  </button>
+                  <button class="btn btn-secondary btn-sm btn-preview-wk" data-id="${w.id}">
+                    Preview
+                  </button>
+                  <button class="btn btn-quiet btn-sm btn-edit-wk" data-id="${w.id}">
+                    Edit
+                  </button>
+                  <button class="btn btn-quiet btn-sm btn-dup-wk" data-id="${w.id}">
+                    Duplicate
+                  </button>
+                </div>
+              </div>
+            `;
+      }).join("")}
+        </div>
+      </div>
+    `;
+    }
+    attachEvents(container) {
+      container.querySelector("#btn-create-workout")?.addEventListener("click", () => {
+        this.openEditorModal();
+      });
+      container.querySelectorAll(".btn-start-wk").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          await this.app.startWorkout(btn.dataset.id);
+        });
+      });
+      container.querySelectorAll(".btn-preview-wk").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const wk = this.app.workouts.find((w) => w.id === btn.dataset.id);
+          if (wk) this.openPreviewModal(wk);
+        });
+      });
+      container.querySelectorAll(".btn-edit-wk").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const wk = this.app.workouts.find((w) => w.id === btn.dataset.id);
+          if (wk) this.openEditorModal(wk);
+        });
+      });
+      container.querySelectorAll(".btn-dup-wk").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const wk = this.app.workouts.find((w) => w.id === btn.dataset.id);
+          if (wk) {
+            const dupName = `${wk.name} (Copy)`;
+            await this.app.api("createWorkout", {
+              name: dupName,
+              weekdayLabel: wk.weekdayLabel,
+              positions: wk.positions
+            });
+            await this.app.refresh();
+          }
+        });
+      });
+    }
+    openPreviewModal(workout) {
+      const modal = document.createElement("div");
+      modal.className = "modal-overlay";
+      modal.innerHTML = `
+      <div class="modal-sheet">
+        <div class="modal-header">
+          <div>
+            <h2 class="modal-title">${workout.name}</h2>
+            <div class="metadata-text">${workout.positions ? workout.positions.length : 0} exercises ${workout.weekdayLabel ? `\xB7 ${workout.weekdayLabel}` : ""}</div>
+          </div>
+          <button class="btn btn-quiet btn-sm" id="btn-close-preview" style="font-size: 1.25rem;">\u2715</button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+          ${(workout.positions || []).map((p, idx) => {
+        const ex = this.app.exercises.find((e) => e.id === p.exerciseId) || { name: "Exercise" };
+        const setsDesc = p.plannedSets?.length ? `${p.plannedSets.length} sets \xB7 ${p.plannedSets[0].repsTarget || "8-10"} reps` : "3 sets";
+        return `
+              <div class="card-raised" style="margin-bottom: 0; padding: 12px 16px;">
+                <div style="font-weight: 600; color: var(--text-primary);">${idx + 1}. ${ex.name}</div>
+                <div class="metadata-text">${setsDesc} ${p.restSeconds ? `\xB7 ${p.restSeconds}s rest` : ""}</div>
+                ${p.notes ? `<div class="metadata-text" style="margin-top: 4px;">${p.notes}</div>` : ""}
+              </div>
+            `;
+      }).join("")}
+        </div>
+
+        <button class="btn btn-primary btn-training-primary" id="btn-start-from-preview">
+          Start Workout Now
+        </button>
+      </div>
+    `;
+      document.querySelector("#modal-container").appendChild(modal);
+      modal.querySelector("#btn-close-preview")?.addEventListener("click", () => modal.remove());
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) modal.remove();
+      });
+      modal.querySelector("#btn-start-from-preview")?.addEventListener("click", async () => {
+        modal.remove();
+        await this.app.startWorkout(workout.id);
+      });
+    }
+    openEditorModal(workout = null) {
+      const isEdit = Boolean(workout);
+      let positions = workout?.positions ? JSON.parse(JSON.stringify(workout.positions)) : [];
+      const renderPositions = () => {
+        if (positions.length === 0) {
+          return `<div class="metadata-text" style="text-align: center; padding: 16px;">No exercises added yet.</div>`;
+        }
+        return positions.map((p, idx) => {
+          const ex = this.app.exercises.find((e) => e.id === p.exerciseId) || { name: "Exercise" };
+          return `
+          <div class="card" style="padding: 12px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 600;">${idx + 1}. ${ex.name}</div>
+              <div class="metadata-text">${p.plannedSets?.length || 3} sets \xB7 ${p.plannedSets?.[0]?.repsTarget || "8-10"} reps \xB7 ${p.restSeconds || 90}s rest</div>
+            </div>
+            <div style="display: flex; gap: 4px;">
+              <button class="btn btn-quiet btn-sm btn-pos-up" data-idx="${idx}" ${idx === 0 ? "disabled" : ""}>\u2191</button>
+              <button class="btn btn-quiet btn-sm btn-pos-down" data-idx="${idx}" ${idx === positions.length - 1 ? "disabled" : ""}>\u2193</button>
+              <button class="btn btn-quiet btn-sm btn-pos-del" data-idx="${idx}" style="color: var(--error);">\u2715</button>
+            </div>
+          </div>
+        `;
+        }).join("");
+      };
+      const modal = document.createElement("div");
+      modal.className = "modal-overlay";
+      modal.innerHTML = `
+      <div class="modal-sheet">
+        <div class="modal-header">
+          <h2 class="modal-title">${isEdit ? "Edit Workout" : "Create Workout"}</h2>
+          <button class="btn btn-quiet btn-sm" id="btn-close-editor" style="font-size: 1.25rem;">\u2715</button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
+          <div>
+            <label class="form-label">Workout Name</label>
+            <input type="text" class="form-input" id="input-wk-name" value="${workout?.name || ""}" placeholder="e.g. Upper Body 1">
+          </div>
+
+          <div>
+            <label class="form-label">Weekday / Focus (Optional)</label>
+            <input type="text" class="form-input" id="input-wk-weekday" value="${workout?.weekdayLabel || ""}" placeholder="e.g. Monday or Push">
+          </div>
+
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label class="form-label" style="margin-bottom: 0;">Exercises</label>
+              <button class="btn btn-secondary btn-sm" id="btn-editor-add-exercise">+ Add Exercise</button>
+            </div>
+            <div id="editor-positions-list">
+              ${renderPositions()}
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-training-primary" id="btn-save-workout">
+          ${isEdit ? "Save Changes" : "Create Workout"}
+        </button>
+      </div>
+    `;
+      document.querySelector("#modal-container").appendChild(modal);
+      const refreshPositionsList = () => {
+        const listEl = modal.querySelector("#editor-positions-list");
+        if (listEl) {
+          listEl.innerHTML = renderPositions();
+          bindPositionControls();
+        }
+      };
+      const bindPositionControls = () => {
+        modal.querySelectorAll(".btn-pos-up").forEach((b) => {
+          b.addEventListener("click", () => {
+            const idx = parseInt(b.dataset.idx, 10);
+            if (idx > 0) {
+              const temp = positions[idx - 1];
+              positions[idx - 1] = positions[idx];
+              positions[idx] = temp;
+              refreshPositionsList();
+            }
+          });
+        });
+        modal.querySelectorAll(".btn-pos-down").forEach((b) => {
+          b.addEventListener("click", () => {
+            const idx = parseInt(b.dataset.idx, 10);
+            if (idx < positions.length - 1) {
+              const temp = positions[idx + 1];
+              positions[idx + 1] = positions[idx];
+              positions[idx] = temp;
+              refreshPositionsList();
+            }
+          });
+        });
+        modal.querySelectorAll(".btn-pos-del").forEach((b) => {
+          b.addEventListener("click", () => {
+            const idx = parseInt(b.dataset.idx, 10);
+            positions.splice(idx, 1);
+            refreshPositionsList();
+          });
+        });
+      };
+      bindPositionControls();
+      modal.querySelector("#btn-close-editor")?.addEventListener("click", () => modal.remove());
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) modal.remove();
+      });
+      modal.querySelector("#btn-editor-add-exercise")?.addEventListener("click", () => {
+        this.openExercisePicker((selectedEx) => {
+          positions.push({
+            id: "pos_" + Math.random().toString(36).substring(2, 9),
+            exerciseId: selectedEx.id,
+            restSeconds: 90,
+            plannedSets: [{ repsTarget: "8-10" }, { repsTarget: "8-10" }, { repsTarget: "8-10" }]
+          });
+          refreshPositionsList();
+        });
+      });
+      modal.querySelector("#btn-save-workout")?.addEventListener("click", async () => {
+        const name = modal.querySelector("#input-wk-name")?.value?.trim();
+        const weekdayLabel = modal.querySelector("#input-wk-weekday")?.value?.trim();
+        if (!name) {
+          alert("Please enter a workout name.");
+          return;
+        }
+        if (positions.length === 0) {
+          alert("Please add at least one exercise.");
+          return;
+        }
+        try {
+          if (isEdit) {
+            await this.app.api("updateWorkout", {
+              id: workout.id,
+              name,
+              weekdayLabel,
+              positions,
+              revision: workout.revision
+            });
+          } else {
+            await this.app.api("createWorkout", {
+              name,
+              weekdayLabel,
+              positions
+            });
+          }
+          modal.remove();
+          await this.app.refresh();
+        } catch (err) {
+          alert("Failed to save workout: " + err.message);
+        }
+      });
+    }
+    openExercisePicker(onSelect) {
+      const modal = document.createElement("div");
+      modal.className = "modal-overlay";
+      modal.innerHTML = `
+      <div class="modal-sheet">
+        <div class="modal-header">
+          <h2 class="modal-title">Select Exercise</h2>
+          <button class="btn btn-quiet btn-sm" id="btn-close-picker" style="font-size: 1.25rem;">\u2715</button>
+        </div>
+        <input type="text" class="form-input" id="input-picker-search" placeholder="Search exercises..." style="margin-bottom: 16px;">
+        <div id="picker-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto;">
+          ${this.app.exercises.map((e) => `
+            <div class="card-raised" style="padding: 12px 16px; margin-bottom: 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" data-ex-id="${e.id}">
+              <div>
+                <div style="font-weight: 600;">${e.name}</div>
+                <div class="metadata-text">${e.equipment ? e.equipment + " \xB7 " : ""}${e.targetMuscle || "Muscle"}</div>
+              </div>
+              <span class="chip" style="font-size: 0.75rem;">Select</span>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+      document.querySelector("#modal-container").appendChild(modal);
+      modal.querySelector("#btn-close-picker")?.addEventListener("click", () => modal.remove());
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) modal.remove();
+      });
+      modal.querySelectorAll("[data-ex-id]").forEach((card) => {
+        card.addEventListener("click", () => {
+          const ex = this.app.exercises.find((e) => e.id === card.dataset.exId);
+          if (ex) {
+            modal.remove();
+            onSelect(ex);
+          }
+        });
+      });
+      const searchInput = modal.querySelector("#input-picker-search");
+      searchInput?.addEventListener("input", (e) => {
+        const q = e.target.value.toLowerCase();
+        modal.querySelectorAll("[data-ex-id]").forEach((card) => {
+          const match = card.textContent.toLowerCase().includes(q);
+          card.style.display = match ? "flex" : "none";
+        });
+      });
+    }
+  };
+
+  // src/client/views/progress.js
+  var ProgressView = class {
+    constructor(app2) {
+      this.app = app2;
+      this.activeTab = "sessions";
+      this.selectedExerciseId = null;
+      this.exerciseHistory = [];
+    }
+    render() {
+      const history = this.app.history || [];
+      const exercises = this.app.exercises || [];
+      return `
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div>
+          <div class="metadata-text" style="font-weight: 600; text-transform: uppercase;">History & Insights</div>
+          <h1 class="page-title" style="margin-top: 2px;">Progress</h1>
+        </div>
+
+        <!-- Segmented Tab: Sessions \xB7 Exercises -->
+        <div class="segmented-control" id="progress-segmented">
+          <button class="segmented-option ${this.activeTab === "sessions" ? "active" : ""}" data-tab-val="sessions">
+            Sessions
+          </button>
+          <button class="segmented-option ${this.activeTab === "exercises" ? "active" : ""}" data-tab-val="exercises">
+            Exercises
+          </button>
+        </div>
+
+        <!-- Content Area -->
+        <div id="progress-content">
+          ${this.activeTab === "sessions" ? this.renderSessionsTab(history) : this.renderExercisesTab(exercises)}
+        </div>
+      </div>
+    `;
+    }
+    renderSessionsTab(history) {
+      if (history.length === 0) {
+        return `
+        <div class="card" style="text-align: center; padding: 40px 20px;">
+          <h2 class="section-title">No Recorded Sessions Yet</h2>
+          <p class="metadata-text">Your completed workout sessions will appear here with full set logs and notes.</p>
+        </div>
+      `;
+      }
+      return `
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        ${history.map((s) => {
+        const dateStr = new Date(s.completedAt || s.startedAt).toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric"
+        });
+        const setsCount = s.progress?.totalWorkingSets || 0;
+        const note = s.progress?.sessionNote;
+        return `
+            <div class="card" style="margin-bottom: 0; padding: 16px 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                <div>
+                  <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--text-primary); margin-bottom: 2px;">
+                    ${s.workoutName}
+                  </h3>
+                  <div class="metadata-text">${dateStr}</div>
+                </div>
+                <span class="chip chip-success" style="font-size: 0.75rem;">Completed</span>
+              </div>
+
+              <div class="metadata-text" style="margin-top: 6px;">
+                ${setsCount} working sets logged
+              </div>
+
+              ${note ? `
+                <div style="margin-top: 10px; padding: 8px 12px; background: var(--bg-surface-raised); border-radius: 8px; font-size: 0.9rem; font-style: italic;">
+                  "${note}"
+                </div>
+              ` : ""}
+            </div>
+          `;
+      }).join("")}
+      </div>
+    `;
+    }
+    renderExercisesTab(exercises) {
+      const unit = localStorage.getItem("my_gym_units") || "kg";
+      return `
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <label class="form-label">Select Movement</label>
+          <select class="form-input" id="select-history-exercise" style="cursor: pointer;">
+            <option value="">-- Choose an exercise --</option>
+            ${exercises.map((e) => `
+              <option value="${e.id}" ${this.selectedExerciseId === e.id ? "selected" : ""}>
+                ${e.name} (${e.equipment || "Bodyweight"})
+              </option>
+            `).join("")}
+          </select>
+        </div>
+
+        <div id="exercise-history-results">
+          ${this.selectedExerciseId ? this.renderExerciseHistoryList(unit) : `
+            <div class="metadata-text" style="text-align: center; padding: 32px 16px;">
+              Select an exercise to review your performance and notes over time.
+            </div>
+          `}
+        </div>
+      </div>
+    `;
+    }
+    renderExerciseHistoryList(unit) {
+      if (this.exerciseHistory.length === 0) {
+        return `
+        <div class="card-raised" style="text-align: center; padding: 24px;">
+          <p class="metadata-text">No recorded history found for this exercise yet.</p>
+        </div>
+      `;
+      }
+      return `
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        ${this.exerciseHistory.map((entry) => {
+        const dateStr = new Date(entry.sessionDate).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric"
+        });
+        const setsDesc = entry.sets.map((s, idx) => `Set ${idx + 1}: ${s.result?.weight || 0} ${unit} \xD7 ${s.result?.reps || 0}`).join(" \xB7 ");
+        return `
+            <div class="card" style="margin-bottom: 0; padding: 14px 18px;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+                <span style="font-weight: 700; color: var(--text-primary);">${entry.workoutName}</span>
+                <span class="metadata-text">${dateStr}</span>
+              </div>
+              <div style="font-family: var(--font-display); font-size: 1rem; color: var(--text-primary); margin-bottom: 4px;">
+                ${setsDesc}
+              </div>
+              ${entry.exerciseNote ? `
+                <div class="metadata-text" style="font-style: italic;">Note: "${entry.exerciseNote}"</div>
+              ` : ""}
+            </div>
+          `;
+      }).join("")}
+      </div>
+    `;
+    }
+    attachEvents(container) {
+      container.querySelectorAll("#progress-segmented .segmented-option").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          this.activeTab = btn.dataset.tabVal;
+          container.querySelectorAll("#progress-segmented .segmented-option").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          const contentEl = container.querySelector("#progress-content");
+          if (contentEl) {
+            contentEl.innerHTML = this.activeTab === "sessions" ? this.renderSessionsTab(this.app.history || []) : this.renderExercisesTab(this.app.exercises || []);
+            this.attachContentEvents(container);
+          }
+        });
+      });
+      this.attachContentEvents(container);
+    }
+    attachContentEvents(container) {
+      const select = container.querySelector("#select-history-exercise");
+      select?.addEventListener("change", async (e) => {
+        const exId = e.target.value;
+        this.selectedExerciseId = exId;
+        if (!exId) {
+          this.exerciseHistory = [];
+          this.updateExerciseResults(container);
+          return;
+        }
+        try {
+          this.exerciseHistory = await this.app.api("getExerciseHistory", { exerciseId: exId });
+          this.updateExerciseResults(container);
+        } catch (err) {
+          alert("Failed to load exercise history: " + err.message);
+        }
+      });
+    }
+    updateExerciseResults(container) {
+      const resultsEl = container.querySelector("#exercise-history-results");
+      const unit = localStorage.getItem("my_gym_units") || "kg";
+      if (resultsEl) {
+        resultsEl.innerHTML = this.selectedExerciseId ? this.renderExerciseHistoryList(unit) : '<div class="metadata-text" style="text-align: center; padding: 32px 16px;">Select an exercise to review history.</div>';
+      }
+    }
+  };
+
+  // src/client/views/session.js
+  var ActiveSessionView = class {
+    constructor(app2) {
+      this.app = app2;
+      this.currentPositionIndex = 0;
+      this.weightInputVal = null;
+      this.repsInputVal = null;
+      this.isWarmup = false;
+      this.lastLoggedSetId = null;
+    }
+    getCurrentPosition() {
+      const session = this.app.activeSession;
+      if (!session || !session.plan?.positions || session.plan.positions.length === 0) return null;
+      return session.plan.positions[this.currentPositionIndex] || session.plan.positions[0] || null;
+    }
+    getCurrentExercise() {
+      const pos = this.getCurrentPosition();
+      if (!pos) return null;
+      const session = this.app.activeSession;
+      const chosenExId = session.progress?.selectedAlternatives?.[pos.id] || session.chosenExercises?.[pos.id] || pos.exerciseId;
+      return this.app.exercises.find((e) => e.id === chosenExId) || { id: chosenExId, name: "Exercise", recordingKind: "reps_weight" };
+    }
+    render() {
+      const session = this.app.activeSession;
+      if (!session) {
+        return `
+        <div class="card" style="text-align: center; padding: 40px 20px;">
+          <h2 class="section-title">No Active Session</h2>
+          <p class="metadata-text" style="margin-bottom: 20px;">You don't have a workout session currently in progress.</p>
+          <button class="btn btn-primary" id="btn-session-go-today">Go to Today</button>
+        </div>
+      `;
+      }
+      const positions = session.plan?.positions || [];
+      const totalPositions = positions.length;
+      const pos = this.getCurrentPosition();
+      const exercise = this.getCurrentExercise();
+      if (!pos || !exercise) {
+        return `
+        <div class="card" style="text-align: center; padding: 40px 20px;">
+          <h2 class="section-title">Session Plan Error</h2>
+          <p class="metadata-text" style="margin-bottom: 20px;">No exercise positions found for this active session.</p>
+          <div style="display: flex; justify-content: center; gap: 8px;">
+            <button class="btn btn-secondary" id="btn-session-go-today">Back to Today</button>
+            <button class="btn btn-destructive" id="btn-session-discard-corrupt">Discard Session</button>
+          </div>
+        </div>
+      `;
+      }
+      const unit = localStorage.getItem("my_gym_units") || "kg";
+      const allPosLogs = (session.setLogs || []).filter((l) => l.positionId === pos.id && !l.voidedAt);
+      const warmupLogs = allPosLogs.filter((l) => l.isWarmup);
+      const workingLogs = allPosLogs.filter((l) => !l.isWarmup);
+      const currentSetNum = workingLogs.length + 1;
+      const plannedSetsCount = pos.plannedSets?.length || 3;
+      const currentPlannedSet = pos.plannedSets?.[workingLogs.length] || pos.plannedSets?.[pos.plannedSets.length - 1];
+      const benchmark = this.app.benchmarks?.[exercise.id] || null;
+      const benchSet = benchmark?.sets?.[workingLogs.length] || benchmark?.sets?.[0];
+      if (this.weightInputVal === null) {
+        if (benchSet?.result?.weight !== void 0) {
+          this.weightInputVal = benchSet.result.weight;
+        } else if (workingLogs.length > 0) {
+          this.weightInputVal = workingLogs[workingLogs.length - 1].result?.weight || 20;
+        } else {
+          this.weightInputVal = 20;
+        }
+      }
+      if (this.repsInputVal === null) {
+        if (benchSet?.result?.reps !== void 0) {
+          this.repsInputVal = benchSet.result.reps;
+        } else if (currentPlannedSet?.repsTarget) {
+          const parsed = parseInt(currentPlannedSet.repsTarget, 10);
+          this.repsInputVal = isNaN(parsed) ? 8 : parsed;
+        } else {
+          this.repsInputVal = 8;
+        }
+      }
+      return `
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <!-- Top Orientation Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <div class="metadata-text" style="font-weight: 600; text-transform: uppercase;">
+              ${session.workoutName} \xB7 Exercise ${this.currentPositionIndex + 1} of ${totalPositions}
+            </div>
+            <h1 class="exercise-title" style="margin-top: 2px;">${exercise.name}</h1>
+            <div class="metadata-text">
+              ${exercise.equipment ? exercise.equipment + " \xB7 " : ""}${exercise.loggingConvention || "Standard resistance"}
+            </div>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btn-session-outline" style="white-space: nowrap;">
+            \u{1F4CB} Outline
+          </button>
+        </div>
+
+        <!-- Target prescription & notes -->
+        <div class="card-raised" style="padding: 12px 16px; margin-bottom: 0;">
+          <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-primary);">
+            Today: ${plannedSetsCount} sets ${currentPlannedSet?.repsTarget ? `\xB7 ${currentPlannedSet.repsTarget} reps` : ""}
+            ${currentPlannedSet?.rpeTarget ? `\xB7 Target RPE ${currentPlannedSet.rpeTarget}` : ""}
+          </div>
+          ${pos.notes ? `<div class="metadata-text" style="margin-top: 4px;">Note: ${pos.notes}</div>` : ""}
+        </div>
+
+        <!-- Benchmark / Last Time Comparison -->
+        ${benchmark ? `
+          <div class="benchmark-card">
+            <div class="benchmark-card-header">
+              <span>LAST TIME \xB7 ${new Date(benchmark.sessionDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+              <span>Set ${workingLogs.length + 1}</span>
+            </div>
+            <div class="benchmark-card-val">
+              ${benchSet?.result?.weight ? `${benchSet.result.weight} ${unit} \xD7 ` : ""}${benchSet?.result?.reps || 0} reps
+            </div>
+            ${benchmark.exerciseNote ? `<div class="metadata-text" style="font-style: italic;">"${benchmark.exerciseNote}"</div>` : ""}
+          </div>
+        ` : `
+          <div class="metadata-text" style="padding: 4px 8px;">
+            No previous results for this exercise yet.
+          </div>
+        `}
+
+        <!-- Rest Panel (if running) -->
+        ${this.renderRestPanel()}
+
+        <!-- Signature Focused Current-Set Panel -->
+        <div class="active-set-panel">
+          <div class="set-panel-header">
+            <span class="set-panel-title">
+              ${this.isWarmup ? "WARM-UP SET" : `SET ${currentSetNum} OF ${plannedSetsCount}`}
+            </span>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;">
+              <input type="checkbox" id="chk-is-warmup" ${this.isWarmup ? "checked" : ""}>
+              Warm-up
+            </label>
+          </div>
+
+          <!-- Numeric Entry: Weight & Reps -->
+          <div class="numeric-entry-row">
+            <!-- Weight Box -->
+            <div class="numeric-entry-box" id="box-set-weight">
+              <span class="numeric-entry-label">Weight</span>
+              <div class="numeric-value-container">
+                <input type="number" step="0.5" class="numeric-value-input" id="input-set-weight" value="${this.weightInputVal}">
+                <span class="numeric-unit">${unit}</span>
+              </div>
+              <div class="stepper-row">
+                <button class="stepper-btn" id="btn-weight-minus">-2.5</button>
+                <button class="stepper-btn" id="btn-weight-plus">+2.5</button>
+              </div>
+            </div>
+
+            <!-- Reps Box -->
+            <div class="numeric-entry-box" id="box-set-reps">
+              <span class="numeric-entry-label">Reps</span>
+              <div class="numeric-value-container">
+                <input type="number" step="1" class="numeric-value-input" id="input-set-reps" value="${this.repsInputVal}">
+                <span class="numeric-unit">reps</span>
+              </div>
+              <div class="stepper-row">
+                <button class="stepper-btn" id="btn-reps-minus">-1</button>
+                <button class="stepper-btn" id="btn-reps-plus">+1</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="metadata-text" style="text-align: center; margin-bottom: 12px;">
+            Suggested values \u2014 confirm what you performed
+          </div>
+
+          <!-- Log Set Dominant Button -->
+          <button class="btn btn-primary btn-training-primary" id="btn-log-set">
+            Log set
+          </button>
+        </div>
+
+        <!-- Compact Set Outline -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h3 class="section-title" style="font-size: 1.1rem; margin-bottom: 0;">Set Outline</h3>
+            <button class="btn btn-quiet btn-sm" id="btn-add-extra-set">+ Add set</button>
+          </div>
+
+          <div class="set-outline-list">
+            <!-- Warmups -->
+            ${warmupLogs.map((log, idx) => `
+              <div class="set-outline-row recorded ${this.lastLoggedSetId === log.id ? "just-recorded" : ""}">
+                <div class="set-outline-left">
+                  <span style="color: var(--success); font-weight: 700;">\u2713</span>
+                  <span>Warm-up ${idx + 1}: ${log.result?.weight || 0} ${unit} \xD7 ${log.result?.reps || 0}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="metadata-text">Recorded</span>
+                  <button class="btn btn-quiet btn-sm btn-undo-set" data-log-id="${log.id}">Undo</button>
+                </div>
+              </div>
+            `).join("")}
+
+            <!-- Working sets -->
+            ${workingLogs.map((log, idx) => `
+              <div class="set-outline-row recorded ${this.lastLoggedSetId === log.id ? "just-recorded" : ""}">
+                <div class="set-outline-left">
+                  <span style="color: var(--success); font-weight: 700;">\u2713</span>
+                  <span>Set ${idx + 1}: ${log.result?.weight || 0} ${unit} \xD7 ${log.result?.reps || 0}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="metadata-text">Recorded</span>
+                  <button class="btn btn-quiet btn-sm btn-undo-set" data-log-id="${log.id}">Undo</button>
+                </div>
+              </div>
+            `).join("")}
+
+            <!-- Current set -->
+            <div class="set-outline-row current">
+              <div class="set-outline-left">
+                <span>\u26A1</span>
+                <span>Set ${workingLogs.length + 1}</span>
+              </div>
+              <span class="chip chip-primary" style="font-size: 0.75rem;">Current</span>
+            </div>
+
+            <!-- Future planned sets -->
+            ${Array.from({ length: Math.max(0, plannedSetsCount - (workingLogs.length + 1)) }).map((_, i) => `
+              <div class="set-outline-row">
+                <div class="set-outline-left">
+                  <span style="opacity: 0.5;">\u25CB</span>
+                  <span class="metadata-text">Set ${workingLogs.length + 2 + i}</span>
+                </div>
+                <span class="metadata-text">Target ${currentPlannedSet?.repsTarget || "reps"}</span>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+
+        <!-- Exercise & Session Navigation Footer -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-subtle);">
+          <button class="btn btn-secondary" id="btn-prev-exercise" ${this.currentPositionIndex === 0 ? "disabled" : ""}>
+            \u2190 Previous
+          </button>
+          <button class="btn btn-secondary" id="btn-finish-session">
+            Finish workout
+          </button>
+          <button class="btn btn-secondary" id="btn-next-exercise" ${this.currentPositionIndex === totalPositions - 1 ? "disabled" : ""}>
+            Next \u2192
+          </button>
+        </div>
+      </div>
+    `;
+    }
+    renderRestPanel() {
+      if (!this.app.restTimer?.active) return "";
+      const rem = this.app.restTimer.remainingSeconds || 0;
+      const mins = Math.floor(rem / 60).toString().padStart(2, "0");
+      const secs = (rem % 60).toString().padStart(2, "0");
+      return `
+      <div class="rest-panel">
+        <div>
+          <div class="metadata-text" style="text-transform: uppercase; font-weight: 600;">Rest Timer</div>
+          <div class="rest-time-display">${mins}:${secs}</div>
+        </div>
+        <div class="rest-controls">
+          <button class="btn btn-secondary btn-sm" id="btn-rest-minus-30">-30s</button>
+          <button class="btn btn-secondary btn-sm" id="btn-rest-plus-30">+30s</button>
+          <button class="btn btn-primary btn-sm" id="btn-rest-end">End rest</button>
+        </div>
+      </div>
+    `;
+    }
+    attachEvents(container) {
+      const session = this.app.activeSession;
+      if (!session) {
+        container.querySelector("#btn-session-go-today")?.addEventListener("click", () => {
+          this.app.setActiveTab("today");
+        });
+        return;
+      }
+      const pos = this.getCurrentPosition();
+      const exercise = this.getCurrentExercise();
+      if (!pos || !exercise) {
+        container.querySelector("#btn-session-go-today")?.addEventListener("click", () => {
+          this.app.setActiveTab("today");
+        });
+        container.querySelector("#btn-session-discard-corrupt")?.addEventListener("click", async () => {
+          if (confirm("Discard this session?")) {
+            await this.app.discardActiveSession();
+          }
+        });
+        return;
+      }
+      const weightInput = container.querySelector("#input-set-weight");
+      const repsInput = container.querySelector("#input-set-reps");
+      const warmupChk = container.querySelector("#chk-is-warmup");
+      weightInput?.addEventListener("input", (e) => {
+        this.weightInputVal = parseFloat(e.target.value) || 0;
+      });
+      repsInput?.addEventListener("input", (e) => {
+        this.repsInputVal = parseInt(e.target.value, 10) || 0;
+      });
+      warmupChk?.addEventListener("change", (e) => {
+        this.isWarmup = e.target.checked;
+        this.renderCurrentSetPanelOnly(container);
+      });
+      const triggerHighlight = (boxId) => {
+        const box = container.querySelector(boxId);
+        if (box) {
+          box.classList.remove("value-changed");
+          void box.offsetWidth;
+          box.classList.add("value-changed");
+          setTimeout(() => box.classList.remove("value-changed"), 400);
+        }
+      };
+      container.querySelector("#btn-weight-minus")?.addEventListener("click", () => {
+        this.weightInputVal = Math.max(0, (this.weightInputVal || 0) - 2.5);
+        if (weightInput) weightInput.value = this.weightInputVal;
+        triggerHighlight("#box-set-weight");
+      });
+      container.querySelector("#btn-weight-plus")?.addEventListener("click", () => {
+        this.weightInputVal = (this.weightInputVal || 0) + 2.5;
+        if (weightInput) weightInput.value = this.weightInputVal;
+        triggerHighlight("#box-set-weight");
+      });
+      container.querySelector("#btn-reps-minus")?.addEventListener("click", () => {
+        this.repsInputVal = Math.max(0, (this.repsInputVal || 0) - 1);
+        if (repsInput) repsInput.value = this.repsInputVal;
+        triggerHighlight("#box-set-reps");
+      });
+      container.querySelector("#btn-reps-plus")?.addEventListener("click", () => {
+        this.repsInputVal = (this.repsInputVal || 0) + 1;
+        if (repsInput) repsInput.value = this.repsInputVal;
+        triggerHighlight("#box-set-reps");
+      });
+      container.querySelector("#btn-log-set")?.addEventListener("click", async () => {
+        const weight = parseFloat(weightInput ? weightInput.value : this.weightInputVal) || 0;
+        const reps = parseInt(repsInput ? repsInput.value : this.repsInputVal, 10) || 0;
+        const isWarmup = this.isWarmup;
+        const allPosLogs = (session.setLogs || []).filter((l) => l.positionId === pos.id && !l.voidedAt);
+        const setIndex = isWarmup ? allPosLogs.filter((l) => l.isWarmup).length + 1 : allPosLogs.filter((l) => !l.isWarmup).length + 1;
+        await this.app.logSet({
+          positionId: pos.id,
+          exerciseId: exercise.id,
+          setIndex,
+          isWarmup,
+          result: { weight, reps },
+          restSeconds: pos.restSeconds || 90
+        });
+        this.isWarmup = false;
+      });
+      container.querySelectorAll(".btn-undo-set").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const logId = btn.dataset.logId;
+          await this.app.undoSet(logId);
+        });
+      });
+      container.querySelector("#btn-session-outline")?.addEventListener("click", () => {
+        this.openOutlineModal();
+      });
+      container.querySelector("#btn-prev-exercise")?.addEventListener("click", () => {
+        if (this.currentPositionIndex > 0) {
+          this.currentPositionIndex--;
+          this.resetEntryInputs();
+          this.app.render();
+        }
+      });
+      container.querySelector("#btn-next-exercise")?.addEventListener("click", () => {
+        const total = session.plan?.positions?.length || 0;
+        if (this.currentPositionIndex < total - 1) {
+          this.currentPositionIndex++;
+          this.resetEntryInputs();
+          this.app.render();
+        }
+      });
+      container.querySelector("#btn-finish-session")?.addEventListener("click", () => {
+        this.app.openFinishModal();
+      });
+      container.querySelector("#btn-rest-minus-30")?.addEventListener("click", () => {
+        this.app.adjustRestTimer(-30);
+      });
+      container.querySelector("#btn-rest-plus-30")?.addEventListener("click", () => {
+        this.app.adjustRestTimer(30);
+      });
+      container.querySelector("#btn-rest-end")?.addEventListener("click", () => {
+        this.app.endRestTimer();
+      });
+    }
+    resetEntryInputs() {
+      this.weightInputVal = null;
+      this.repsInputVal = null;
+      this.isWarmup = false;
+    }
+    openOutlineModal() {
+      const session = this.app.activeSession;
+      if (!session) return;
+      const positions = session.plan?.positions || [];
+      const modal = document.createElement("div");
+      modal.className = "modal-overlay";
+      modal.innerHTML = `
+      <div class="modal-sheet">
+        <div class="modal-header">
+          <h2 class="modal-title">Session Outline</h2>
+          <button class="btn btn-quiet btn-sm" id="btn-close-outline" style="font-size: 1.25rem;">\u2715</button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          ${positions.map((p, idx) => {
+        const exId = session.chosenExercises?.[p.id] || p.exerciseId;
+        const ex = this.app.exercises.find((e) => e.id === exId) || { name: "Exercise" };
+        const logs = (session.setLogs || []).filter((l) => l.positionId === p.id && !l.voidedAt && !l.isWarmup);
+        const isCurrent = idx === this.currentPositionIndex;
+        return `
+              <div class="card" style="margin-bottom: 0; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border: ${isCurrent ? "2px solid var(--primary)" : "1px solid var(--border-subtle)"}; cursor: pointer;" data-nav-idx="${idx}">
+                <div>
+                  <div style="font-weight: 600; color: var(--text-primary);">${idx + 1}. ${ex.name}</div>
+                  <div class="metadata-text">${logs.length} of ${p.plannedSets?.length || 3} working sets completed</div>
+                </div>
+                ${isCurrent ? '<span class="chip chip-primary" style="font-size: 0.75rem;">Current</span>' : ""}
+              </div>
+            `;
+      }).join("")}
+        </div>
+      </div>
+    `;
+      document.querySelector("#modal-container").appendChild(modal);
+      modal.querySelector("#btn-close-outline")?.addEventListener("click", () => modal.remove());
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) modal.remove();
+      });
+      modal.querySelectorAll("[data-nav-idx]").forEach((item) => {
+        item.addEventListener("click", () => {
+          this.currentPositionIndex = parseInt(item.dataset.navIdx, 10);
+          this.resetEntryInputs();
+          modal.remove();
+          this.app.render();
+        });
+      });
+    }
+  };
+
+  // src/client/views/settings.js
+  function escapeHtml(str) {
+    if (!str) return "";
+    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  var SettingsModal = class {
+    constructor(app2) {
+      this.app = app2;
+    }
+    render() {
+      const currentPref = themeManager.getPreference();
+      const currentUnit = localStorage.getItem("my_gym_units") || "kg";
+      const spreadsheetUrl = this.app.spreadsheetUrl || localStorage.getItem("my_gym_spreadsheet_url") || "";
+      const remoteConfig = transport.getRemoteConfig();
+      return `
+      <div class="modal-overlay" id="settings-overlay">
+        <div class="modal-sheet">
+          <div class="modal-header">
+            <h2 class="modal-title">Settings</h2>
+            <button class="btn btn-quiet btn-sm" id="btn-close-settings" style="font-size: 1.25rem;">\u2715</button>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            <!-- Appearance -->
+            <div>
+              <label class="form-label">Appearance</label>
+              <div class="segmented-control" id="theme-segmented">
+                <button class="segmented-option ${currentPref === "system" ? "active" : ""}" data-theme-val="system">System</button>
+                <button class="segmented-option ${currentPref === "light" ? "active" : ""}" data-theme-val="light">Light</button>
+                <button class="segmented-option ${currentPref === "dark" ? "active" : ""}" data-theme-val="dark">Dark</button>
+              </div>
+              <p class="metadata-text" style="margin-top: 6px;">System matches your device appearance automatically.</p>
+            </div>
+
+            <!-- Units -->
+            <div>
+              <label class="form-label">Units</label>
+              <div class="segmented-control" id="units-segmented">
+                <button class="segmented-option ${currentUnit === "kg" ? "active" : ""}" data-unit-val="kg">Kilograms (kg)</button>
+                <button class="segmented-option ${currentUnit === "lbs" ? "active" : ""}" data-unit-val="lbs">Pounds (lbs)</button>
+              </div>
+            </div>
+
+            <!-- Cloud Connection (Google Sheets) -->
+            <div style="border-top: 1px solid var(--border-subtle); padding-top: 16px;">
+              <label class="form-label">Cloud Connection (Google Sheets)</label>
+              <p class="metadata-text" style="margin-bottom: 12px;">
+                Connect your personal Google Apps Script Web App for sync across devices and offline backup to Google Sheets.
+              </p>
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Apps Script Web App URL</label>
+                <input type="url" id="setting-gas-url" class="form-input" placeholder="https://script.google.com/macros/s/.../exec" value="${escapeHtml(remoteConfig.gasUrl)}">
+              </div>
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">API Secret Token (Optional)</label>
+                <input type="password" id="setting-api-token" class="form-input" placeholder="Personal secret password" value="${escapeHtml(remoteConfig.apiToken)}">
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <button class="btn btn-secondary btn-sm" id="btn-test-connection">Test Connection</button>
+                <span id="connection-status-pill" class="status-pill status-idle">Not tested</span>
+              </div>
+            </div>
+
+            <!-- Exercises Spreadsheet Link -->
+            <div style="border-top: 1px solid var(--border-subtle); padding-top: 16px;">
+              <label class="form-label">Exercises & Data Spreadsheet</label>
+              <p class="metadata-text" style="margin-bottom: 12px;">Direct link to your Google Sheets database with exercises, workouts, and logs.</p>
+              ${spreadsheetUrl ? `
+                <a href="${spreadsheetUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" id="link-open-spreadsheet" style="width: 100%; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                  <span>\u{1F4CA}</span>
+                  <span>Open Exercises Spreadsheet</span>
+                  <span style="font-size: 0.85rem; opacity: 0.7;">\u2197</span>
+                </a>
+              ` : `
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <input type="url" class="form-input" id="input-spreadsheet-url" placeholder="https://docs.google.com/spreadsheets/d/..." value="">
+                  <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-secondary btn-sm" id="btn-save-spreadsheet-url" style="flex: 1;">Save URL</button>
+                    <a href="https://docs.google.com/spreadsheets" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Open Google Sheets \u2197</a>
+                  </div>
+                </div>
+              `}
+            </div>
+
+            <!-- Data & Backup -->
+            <div style="border-top: 1px solid var(--border-subtle); padding-top: 16px;">
+              <label class="form-label">Backup & Export</label>
+              <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
+                <button class="btn btn-secondary" id="btn-export-backup" style="width: 100%;">
+                  \u{1F4E5} Export JSON Backup
+                </button>
+                <label class="btn btn-secondary" style="width: 100%; cursor: pointer; text-align: center;">
+                  \u{1F4E4} Restore from Backup
+                  <input type="file" id="input-restore-backup" accept=".json" style="display: none;">
+                </label>
+              </div>
+            </div>
+
+            <div style="border-top: 1px solid var(--border-subtle); padding-top: 16px; text-align: center;">
+              <p class="metadata-text">Gym Tracker v1.3 \xB7 Clean Training Companion</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    }
+    attachEvents(container) {
+      const overlay = container.querySelector("#settings-overlay");
+      const closeBtn = container.querySelector("#btn-close-settings");
+      const urlInput = container.querySelector("#setting-gas-url");
+      const tokenInput = container.querySelector("#setting-api-token");
+      const btnTest = container.querySelector("#btn-test-connection");
+      const statusPill = container.querySelector("#connection-status-pill");
+      const saveCloudConfig = () => {
+        if (urlInput || tokenInput) {
+          transport.setRemoteConfig({
+            gasUrl: urlInput ? urlInput.value.trim() : void 0,
+            apiToken: tokenInput ? tokenInput.value.trim() : void 0
+          });
+        }
+      };
+      const close = () => {
+        saveCloudConfig();
+        container.innerHTML = "";
+      };
+      closeBtn?.addEventListener("click", close);
+      overlay?.addEventListener("click", (e) => {
+        if (e.target === overlay) close();
+      });
+      btnTest?.addEventListener("click", async () => {
+        const gasUrl = urlInput ? urlInput.value.trim() : "";
+        const apiToken = tokenInput ? tokenInput.value.trim() : "";
+        if (!gasUrl && !transport.isLocalDev && !transport.isGas) {
+          if (statusPill) {
+            statusPill.className = "status-pill status-error";
+            statusPill.textContent = "URL required";
+          }
+          return;
+        }
+        transport.setRemoteConfig({ gasUrl, apiToken });
+        if (statusPill) {
+          statusPill.className = "status-pill status-loading";
+          statusPill.textContent = "Testing...";
+        }
+        try {
+          await transport.testConnection();
+          if (statusPill) {
+            statusPill.className = "status-pill status-success";
+            statusPill.textContent = "Connected \u{1F7E2}";
+          }
+        } catch (err) {
+          if (statusPill) {
+            statusPill.className = "status-pill status-error";
+            statusPill.textContent = err.message.includes("Unauthorized") ? "Unauthorized \u{1F534}" : "Failed \u{1F534}";
+          }
+        }
+      });
+      container.querySelectorAll("#theme-segmented .segmented-option").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const val = btn.dataset.themeVal;
+          themeManager.setPreference(val);
+          container.querySelectorAll("#theme-segmented .segmented-option").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+        });
+      });
+      container.querySelectorAll("#units-segmented .segmented-option").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const val = btn.dataset.unitVal;
+          localStorage.setItem("my_gym_units", val);
+          container.querySelectorAll("#units-segmented .segmented-option").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          this.app.render();
+        });
+      });
+      container.querySelector("#btn-export-backup")?.addEventListener("click", async () => {
+        try {
+          const backup = await this.app.api("exportData");
+          const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `gym_backup_${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+        } catch (err) {
+          alert("Failed to export backup: " + err.message);
+        }
+      });
+      container.querySelector("#input-restore-backup")?.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (!confirm("Restoring will replace or merge backup data. Continue?")) return;
+        try {
+          const text = await file.text();
+          const data = JSON.parse(text);
+          await this.app.api("restoreData", { backup: data });
+          alert("Backup restored successfully!");
+          close();
+          await this.app.refresh();
+        } catch (err) {
+          alert("Restore failed: " + err.message);
+        }
+      });
+      container.querySelector("#btn-save-spreadsheet-url")?.addEventListener("click", () => {
+        const input = container.querySelector("#input-spreadsheet-url");
+        const val = input?.value?.trim();
+        if (val) {
+          localStorage.setItem("my_gym_spreadsheet_url", val);
+          this.app.spreadsheetUrl = val;
+          alert("Spreadsheet URL saved!");
+          container.innerHTML = this.render();
+          this.attachEvents(container);
+        }
+      });
+    }
+  };
+
+  // src/client/app.js
+  var GymApp = class {
+    constructor() {
+      this.activeTab = "today";
+      this.workouts = [];
+      this.exercises = [];
+      this.history = [];
+      this.activeSession = null;
+      this.benchmarks = {};
+      this.spreadsheetUrl = null;
+      this.restTimer = {
+        active: false,
+        remainingSeconds: 0,
+        intervalId: null
+      };
+      this.views = {
+        today: new TodayView(this),
+        workouts: new WorkoutsView(this),
+        progress: new ProgressView(this),
+        session: new ActiveSessionView(this),
+        settings: new SettingsModal(this)
+      };
+    }
+    async init() {
+      this.bindGlobalEvents();
+      await this.refresh();
+    }
+    async api(action, payload = {}) {
+      return transport.send(action, payload);
+    }
+    setActiveSessionData(details) {
+      if (!details) {
+        this.activeSession = null;
+        return;
+      }
+      const rawSession = details.session || details;
+      if (!rawSession || !rawSession.id) {
+        this.activeSession = null;
+        return;
+      }
+      const setLogs = details.setLogs || rawSession.setLogs || [];
+      const benchmarks = details.benchmarks || rawSession.benchmarks || {};
+      this.activeSession = {
+        ...rawSession,
+        setLogs,
+        benchmarks
+      };
+      if (benchmarks && typeof benchmarks === "object") {
+        Object.assign(this.benchmarks, benchmarks);
+      }
+    }
+    async refresh() {
+      try {
+        const data = await this.api("bootstrap");
+        this.workouts = data.workouts || [];
+        this.exercises = data.exercises || [];
+        this.history = data.history || [];
+        this.spreadsheetUrl = data.spreadsheetUrl || localStorage.getItem("my_gym_spreadsheet_url") || null;
+        this.setActiveSessionData(data.activeSession);
+        if (this.activeSession?.plan?.positions) {
+          await this.loadBenchmarksForSession();
+        }
+        this.render();
+      } catch (err) {
+        console.error("Initialization error:", err);
+      }
+    }
+    async loadBenchmarksForSession() {
+      if (!this.activeSession?.plan?.positions) return;
+      for (const pos of this.activeSession.plan.positions) {
+        const exId = this.activeSession.progress?.selectedAlternatives?.[pos.id] || pos.exerciseId;
+        if (exId && !this.benchmarks[exId]) {
+          try {
+            const hist = await this.api("getExerciseHistory", { exerciseId: exId });
+            if (hist && hist.length > 0) {
+              this.benchmarks[exId] = hist[0];
+            }
+          } catch (e) {
+            console.warn("Could not load benchmark for", exId, e);
+          }
+        }
+      }
+    }
+    bindGlobalEvents() {
+      document.querySelector("#brand-home")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.setActiveTab("today");
+      });
+      document.querySelector("#btn-open-settings")?.addEventListener("click", () => {
+        this.openSettingsModal();
+      });
+      document.querySelector("#btn-banner-resume")?.addEventListener("click", () => {
+        this.setActiveTab("session");
+      });
+      document.querySelectorAll(".bottom-nav .nav-item").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const tab = btn.dataset.tab;
+          if (tab) this.setActiveTab(tab);
+        });
+      });
+    }
+    setActiveTab(tab) {
+      this.activeTab = tab;
+      this.render();
+    }
+    updateNavState() {
+      document.querySelectorAll(".bottom-nav .nav-item").forEach((btn) => {
+        if (btn.dataset.tab === this.activeTab) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+      const banner = document.querySelector("#active-session-banner");
+      if (banner) {
+        if (this.activeSession && this.activeTab !== "session") {
+          banner.style.display = "flex";
+          const nameEl = document.querySelector("#banner-workout-name");
+          const metaEl = document.querySelector("#banner-workout-meta");
+          if (nameEl) nameEl.textContent = this.activeSession.workoutName;
+          if (metaEl) {
+            const setsCount = (this.activeSession.setLogs || []).filter((l) => !l.isWarmup && !l.voidedAt).length;
+            metaEl.textContent = `Active session \xB7 ${setsCount} sets recorded`;
+          }
+        } else {
+          banner.style.display = "none";
+        }
+      }
+    }
+    render() {
+      this.updateNavState();
+      const root = document.querySelector("#app-root");
+      if (!root) return;
+      if (this.activeTab === "session") {
+        root.innerHTML = this.views.session.render();
+        this.views.session.attachEvents(root);
+      } else if (this.activeTab === "workouts") {
+        root.innerHTML = this.views.workouts.render();
+        this.views.workouts.attachEvents(root);
+      } else if (this.activeTab === "progress") {
+        root.innerHTML = this.views.progress.render();
+        this.views.progress.attachEvents(root);
+      } else {
+        root.innerHTML = this.views.today.render();
+        this.views.today.attachEvents(root);
+      }
+    }
+    async startWorkout(workoutId) {
+      try {
+        const res = await this.api("startSession", { workoutId });
+        this.setActiveSessionData(res);
+        this.views.session.currentPositionIndex = 0;
+        this.views.session.resetEntryInputs();
+        await this.loadBenchmarksForSession();
+        this.setActiveTab("session");
+      } catch (err) {
+        alert("Failed to start session: " + err.message);
+      }
+    }
+    async logSet(params) {
+      if (!this.activeSession) return;
+      try {
+        const setLog = await this.api("logSet", {
+          sessionId: this.activeSession.id,
+          positionId: params.positionId,
+          exerciseId: params.exerciseId,
+          setIndex: params.setIndex,
+          isWarmup: params.isWarmup,
+          result: params.result
+        });
+        if (!this.activeSession.setLogs) this.activeSession.setLogs = [];
+        this.activeSession.setLogs.push(setLog);
+        this.views.session.lastLoggedSetId = setLog.id;
+        if (params.restSeconds) {
+          this.startRestTimer(params.restSeconds);
+        }
+        this.render();
+      } catch (err) {
+        alert("Failed to log set: " + err.message);
+      }
+    }
+    async undoSet(logId) {
+      if (!this.activeSession) return;
+      try {
+        await this.api("voidSet", {
+          setId: logId
+        });
+        const log = (this.activeSession.setLogs || []).find((l) => l.id === logId);
+        if (log) log.voidedAt = (/* @__PURE__ */ new Date()).toISOString();
+        this.render();
+      } catch (err) {
+        alert("Failed to undo set: " + err.message);
+      }
+    }
+    async discardActiveSession() {
+      if (!this.activeSession) return;
+      try {
+        await this.api("discardSession", { sessionId: this.activeSession.id });
+      } catch (err) {
+        console.warn("Backend discardSession failed:", err);
+      }
+      this.endRestTimer();
+      this.activeSession = null;
+      this.setActiveTab("today");
+      await this.refresh();
+    }
+    startRestTimer(durationSeconds) {
+      this.endRestTimer();
+      this.restTimer.active = true;
+      this.restTimer.remainingSeconds = durationSeconds;
+      this.restTimer.intervalId = setInterval(() => {
+        this.restTimer.remainingSeconds--;
+        if (this.restTimer.remainingSeconds <= 0) {
+          this.endRestTimer();
+        }
+        this.updateRestDisplay();
+      }, 1e3);
+    }
+    adjustRestTimer(seconds) {
+      if (!this.restTimer.active) return;
+      this.restTimer.remainingSeconds = Math.max(0, this.restTimer.remainingSeconds + seconds);
+      this.updateRestDisplay();
+    }
+    endRestTimer() {
+      if (this.restTimer.intervalId) {
+        clearInterval(this.restTimer.intervalId);
+        this.restTimer.intervalId = null;
+      }
+      this.restTimer.active = false;
+      this.restTimer.remainingSeconds = 0;
+      this.updateRestDisplay();
+    }
+    updateRestDisplay() {
+      const displayEl = document.querySelector(".rest-time-display");
+      if (displayEl && this.restTimer.active) {
+        const rem = this.restTimer.remainingSeconds;
+        const mins = Math.floor(rem / 60).toString().padStart(2, "0");
+        const secs = (rem % 60).toString().padStart(2, "0");
+        displayEl.textContent = `${mins}:${secs}`;
+      } else if (!this.restTimer.active) {
+        const panel = document.querySelector(".rest-panel");
+        if (panel) panel.remove();
+      }
+    }
+    openFinishModal() {
+      const session = this.activeSession;
+      if (!session) return;
+      const workingSets = (session.setLogs || []).filter((l) => !l.isWarmup && !l.voidedAt);
+      const modal = document.createElement("div");
+      modal.className = "modal-overlay";
+      modal.innerHTML = `
+      <div class="modal-sheet">
+        <div class="modal-header">
+          <h2 class="modal-title">Finish Workout</h2>
+          <button class="btn btn-quiet btn-sm" id="btn-close-finish" style="font-size: 1.25rem;">\u2715</button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
+          <div class="card-raised" style="padding: 16px;">
+            <div style="font-weight: 700; font-size: 1.2rem; color: var(--text-primary);">${session.workoutName}</div>
+            <div class="metadata-text" style="margin-top: 4px;">${workingSets.length} working sets recorded</div>
+          </div>
+
+          <div>
+            <label class="form-label">Session Note (Optional)</label>
+            <textarea class="form-input" id="input-session-note" rows="3" placeholder="How did training feel today? Any wins or observations?" style="min-height: 80px; resize: vertical;"></textarea>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <button class="btn btn-primary btn-training-primary" id="btn-confirm-finish">
+            Complete & Save Workout
+          </button>
+          <button class="btn btn-secondary" id="btn-keep-training">
+            Keep Training
+          </button>
+        </div>
+      </div>
+    `;
+      document.querySelector("#modal-container").appendChild(modal);
+      const close = () => modal.remove();
+      modal.querySelector("#btn-close-finish")?.addEventListener("click", close);
+      modal.querySelector("#btn-keep-training")?.addEventListener("click", close);
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) close();
+      });
+      modal.querySelector("#btn-confirm-finish")?.addEventListener("click", async () => {
+        const note = modal.querySelector("#input-session-note")?.value?.trim();
+        try {
+          await this.api("finishSession", {
+            sessionId: session.id,
+            sessionNote: note || void 0
+          });
+          this.endRestTimer();
+          this.activeSession = null;
+          close();
+          await this.refresh();
+          this.setActiveTab("progress");
+        } catch (err) {
+          alert("Failed to finish session: " + err.message);
+        }
+      });
+    }
+    openSettingsModal() {
+      const modalContainer = document.querySelector("#modal-container");
+      if (!modalContainer) return;
+      modalContainer.innerHTML = this.views.settings.render();
+      this.views.settings.attachEvents(modalContainer);
+    }
+  };
+  var app = new GymApp();
+  window.app = app;
+  app.init();
+})();
+
+</script>
+</body>
+</html>

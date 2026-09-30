@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="108" fill="#141713"/>
+  <rect x="24" y="24" width="464" height="464" rx="84" fill="#1c211a" stroke="#283226" stroke-width="8"/>
+  <!-- Barbell Bar -->
+  <rect x="110" y="244" width="292" height="24" rx="12" fill="#9fe870"/>
+  <!-- Inner Plates -->
+  <rect x="150" y="166" width="30" height="180" rx="10" fill="#e8f5e9"/>
+  <rect x="332" y="166" width="30" height="180" rx="10" fill="#e8f5e9"/>
+  <!-- Outer Plates -->
+  <rect x="100" y="196" width="24" height="120" rx="8" fill="#9fe870"/>
+  <rect x="388" y="196" width="24" height="120" rx="8" fill="#9fe870"/>
+  <!-- Central Lightning Bolt Motif -->
+  <path d="M268 140 L230 248 L272 248 L244 372 L302 244 L260 244 Z" fill="#9fe870" opacity="0.95"/>
+</svg>
