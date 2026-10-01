@@ -1,58 +1,29 @@
-// PWA Service Worker for /gym/
-const CACHE_NAME = 'my-gym-pwa-v1';
-const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './manifest.webmanifest',
-  './icon.svg'
-];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    }).then(() => self.skipWaiting())
-  );
+const PREFIX = 'my-gym-shell:' + new URL(self.registration.scope).pathname + ':';
+const CACHE = PREFIX + "4ba4991410415e65";
+const ASSETS = ["./index.html","./manifest.webmanifest","./icon.svg"].map(path => new URL(path, self.registration.scope).href);
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(
+    ASSETS.map(url => new Request(url, { cache: 'reload' }))
+  )).then(() => self.skipWaiting()));
 });
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME && key.startsWith('my-gym-pwa-')) {
-            return caches.delete(key);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
-  );
+self.addEventListener('activate', event => {
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key =>
+    (key.startsWith(PREFIX) && key !== CACHE) ||
+    (new URL(self.registration.scope).pathname === '/gym/' && key === 'my-gym-pwa-v1')
+  ).map(key => caches.delete(key)))).then(() => self.clients.claim()));
 });
-
-self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-
-  // Network-only for remote Google Apps Script API calls
-  if (url.hostname.includes('script.google.com') || url.pathname.includes('/api/')) {
-    return;
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin || !request.url.startsWith(self.registration.scope)) return;
+  if (url.pathname.includes('/api/')) return;
+  if (request.mode === 'navigate') {
+    event.respondWith(caches.open(CACHE).then(async cache =>
+      (await cache.match(new URL('./index.html', self.registration.scope).href)) || fetch(request)
+    ));
+  } else if (ASSETS.includes(request.url)) {
+    event.respondWith(caches.open(CACHE).then(async cache => (await cache.match(request)) || fetch(request)));
   }
-
-  // Cache-first for local static assets
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
-        }
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-        return response;
-      });
-    })
-  );
 });
