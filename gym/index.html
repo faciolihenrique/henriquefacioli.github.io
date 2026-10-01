@@ -149,6 +149,72 @@ header.app-header {
   gap: 8px;
 }
 
+/* A quiet, persistent explanation of where the current data came from. */
+.header-identity { min-width: 0; }
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: 600 0.875rem var(--font-body);
+  text-align: left;
+  cursor: pointer;
+}
+.connection-status:hover { text-decoration: underline; }
+.connection-status:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.connection-status[data-tone="loading"] { color: var(--primary); }
+.connection-status[data-tone="error"], .connection-error { color: var(--error); }
+.connection-status[data-tone="warning"], .connection-warning { color: var(--warning); }
+.connection-status[data-tone="success"] { color: var(--success); }
+.connection-icon { display: inline-block; flex-shrink: 0; }
+.connection-status[data-tone="loading"] .connection-icon { animation: connectionSpin 1.2s linear infinite; }
+@keyframes connectionSpin { to { transform: rotate(360deg); } }
+.loading-state { display: flex; flex-direction: column; gap: 16px; }
+.skeleton-card {
+  height: 190px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--bg-surface-raised);
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-card::after {
+  content: '';
+  display: block;
+  height: 14px;
+  width: 55%;
+  margin: 24px;
+  border-radius: 6px;
+  background: var(--border-subtle);
+  box-shadow: 0 28px 0 var(--border-subtle);
+}
+.skeleton-short { height: 94px; }
+.connection-dialog {
+  margin: auto;
+  width: min(580px, calc(100% - 24px));
+  max-height: 90dvh;
+  padding: 24px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sheet);
+  background: var(--bg-surface-raised);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-overlay);
+}
+.connection-dialog::backdrop { background: var(--scrim); }
+.connection-details { display: flex; flex-direction: column; gap: 16px; overflow-wrap: anywhere; }
+.connection-summary { font-weight: 600; }
+.connection-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; font-size: 0.95rem; }
+.connection-facts dt { color: var(--text-secondary); }
+.connection-facts dd { margin: 0; }
+.connection-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.connection-actions .btn { flex: 1 1 180px; }
+.connection-feedback { margin-top: 12px; }
+.connection-error, .connection-warning { font-size: 0.95rem; margin-top: 8px; }
+
 /* Main Container */
 .container {
   max-width: 600px;
@@ -886,10 +952,15 @@ header.app-header {
 <body>
   <!-- Top App Header -->
   <header class="app-header">
-    <a href="#" class="app-brand" id="brand-home">
+    <div class="header-identity"><a href="#" class="app-brand" id="brand-home">
       <span>⚡</span>
       <span>Workout Tracker</span>
     </a>
+    <button class="connection-status" id="btn-data-status" aria-haspopup="dialog">
+      <span class="connection-icon" aria-hidden="true">↻</span>
+      <span class="connection-label" role="status" aria-live="polite">Opening your workouts…</span>
+      <span aria-hidden="true">›</span>
+    </button></div>
     <div class="header-actions">
       <button class="btn btn-quiet btn-sm" id="btn-open-settings" aria-label="Open Settings" style="padding: 6px 10px; font-size: 1.1rem;">
         ⚙️
@@ -907,7 +978,15 @@ header.app-header {
   </div>
 
   <!-- Main View Container -->
-  <main id="app-root" class="container"></main>
+  <main id="app-root" class="container" aria-busy="true">
+    <section class="loading-state">
+      <h1 class="page-title">Your workouts</h1>
+      <p class="metadata-text" role="status">Loading your workouts…</p>
+      <div class="skeleton-card" aria-hidden="true"></div>
+      <div class="skeleton-card skeleton-short" aria-hidden="true"></div>
+      <div class="skeleton-card skeleton-short" aria-hidden="true"></div>
+    </section>
+  </main>
 
   <!-- Modal / Dialog Container -->
   <div id="modal-container"></div>
@@ -929,22 +1008,86 @@ header.app-header {
   </nav>
 
   <script>
-
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js', { scope: './' })
-          .then(reg => console.log('PWA ServiceWorker registered with scope:', reg.scope))
-          .catch(err => console.warn('PWA ServiceWorker registration failed:', err));
-      });
-    }
-  
 (() => {
+  // src/client/connection-state.js
+  var READ_ACTIONS = /* @__PURE__ */ new Set([
+    "bootstrap",
+    "init",
+    "downloadData",
+    "listExercises",
+    "getExercise",
+    "listWorkouts",
+    "getWorkout",
+    "getSessionDetails",
+    "listSessions",
+    "getExerciseHistory",
+    "exportData"
+  ]);
+  var ConnectionState = class {
+    constructor() {
+      this.listeners = /* @__PURE__ */ new Set();
+      this.reset();
+    }
+    reset() {
+      this.pending = /* @__PURE__ */ new Map();
+      this.lastChecked = null;
+      this.lastSaved = null;
+      this.readError = null;
+      this.writeError = null;
+      this.emit();
+    }
+    subscribe(listener) {
+      this.listeners.add(listener);
+      listener(this.snapshot());
+      return () => this.listeners.delete(listener);
+    }
+    snapshot() {
+      return {
+        loading: [...this.pending.values()].some((action) => READ_ACTIONS.has(action)),
+        saving: [...this.pending.values()].some((action) => !READ_ACTIONS.has(action)),
+        pendingCount: this.pending.size,
+        lastChecked: this.lastChecked,
+        lastSaved: this.lastSaved,
+        readError: this.readError,
+        writeError: this.writeError
+      };
+    }
+    emit() {
+      for (const listener of this.listeners) listener(this.snapshot());
+    }
+    begin(action) {
+      const request = Symbol(action);
+      this.pending.set(request, action);
+      this.emit();
+      return request;
+    }
+    finish(request, error = null) {
+      const action = this.pending.get(request);
+      if (!action) return;
+      this.pending.delete(request);
+      if (READ_ACTIONS.has(action)) {
+        if (error) this.readError = error.message;
+        else if (action === "bootstrap" || action === "init" || action === "downloadData") {
+          this.lastChecked = (/* @__PURE__ */ new Date()).toISOString();
+          this.readError = null;
+        }
+      } else if (error) {
+        this.writeError = error.message;
+      } else {
+        this.lastSaved = (/* @__PURE__ */ new Date()).toISOString();
+      }
+      this.emit();
+    }
+  };
+
   // src/client/transport.js
   var STORAGE_QUEUE_KEY = "workout_app_pending_mutations";
   var STORAGE_GAS_URL_KEY = "workout_app_gas_url";
   var STORAGE_API_TOKEN_KEY = "workout_app_api_token";
   var Transport = class {
     constructor(options = {}) {
+      this.connection = new ConnectionState();
+      this.timeoutMs = options.timeoutMs ?? 6e4;
       this.storage = options.storage || (typeof localStorage !== "undefined" ? localStorage : null);
       this.fetchFn = options.fetchFn || (typeof fetch !== "undefined" ? typeof window !== "undefined" ? fetch.bind(window) : fetch.bind(globalThis) : null);
       this.isGas = options.isGas !== void 0 ? options.isGas : typeof window !== "undefined" && Boolean(window.google?.script?.run);
@@ -957,6 +1100,7 @@ header.app-header {
       };
     }
     setRemoteConfig({ gasUrl, apiToken } = {}) {
+      const previous = this.getRemoteConfig();
       if (gasUrl !== void 0) {
         const trimmedUrl = typeof gasUrl === "string" ? gasUrl.trim() : "";
         if (trimmedUrl) this.storage?.setItem(STORAGE_GAS_URL_KEY, trimmedUrl);
@@ -966,6 +1110,10 @@ header.app-header {
         const trimmedToken = typeof apiToken === "string" ? apiToken.trim() : "";
         if (trimmedToken) this.storage?.setItem(STORAGE_API_TOKEN_KEY, trimmedToken);
         else this.storage?.removeItem(STORAGE_API_TOKEN_KEY);
+      }
+      const current = this.getRemoteConfig();
+      if (current.gasUrl !== previous.gasUrl || current.apiToken !== previous.apiToken) {
+        this.connection.reset();
       }
     }
     getPendingQueue() {
@@ -996,6 +1144,25 @@ header.app-header {
       this.savePendingQueue(queue);
     }
     async send(action, payload = {}) {
+      const request = this.connection.begin(action);
+      let timeout;
+      try {
+        const data = await Promise.race([
+          this.dispatch(action, payload),
+          new Promise((_, reject) => {
+            timeout = setTimeout(() => reject(new Error("The server did not respond in time. It may still be processing the request.")), this.timeoutMs);
+          })
+        ]);
+        this.connection.finish(request);
+        return data;
+      } catch (error) {
+        this.connection.finish(request, error);
+        throw error;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+    async dispatch(action, payload = {}) {
       const requestId = "req_" + Math.random().toString(36).substring(2, 10);
       const { gasUrl, apiToken } = this.getRemoteConfig();
       const command = { action, payload, token: apiToken || void 0, requestId };
@@ -1297,6 +1464,8 @@ header.app-header {
           </div>
           <button class="btn btn-primary btn-sm" id="btn-create-workout">+ New Workout</button>
         </div>
+        <p class="metadata-text">Workout edits are saved on this device. Publish them when you want to update Sheets.</p>
+        ${this.app.offline.status.libraryChanges ? '<button class="btn btn-secondary" id="btn-publish-workouts">Publish workout changes</button>' : ""}
 
         <!-- Workouts list -->
         <div style="display: flex; flex-direction: column; gap: 16px;">
@@ -1337,6 +1506,7 @@ header.app-header {
     `;
     }
     attachEvents(container) {
+      container.querySelector("#btn-publish-workouts")?.addEventListener("click", () => this.app.publishWorkoutChanges());
       container.querySelector("#btn-create-workout")?.addEventListener("click", () => {
         this.openEditorModal();
       });
@@ -1529,7 +1699,7 @@ header.app-header {
           refreshPositionsList();
         });
       });
-      modal.querySelector("#btn-save-workout")?.addEventListener("click", async () => {
+      modal.querySelector("#btn-save-workout")?.addEventListener("click", () => this.app.runAction("saveWorkout", "#btn-save-workout", "Saving workout\u2026", async () => {
         const name = modal.querySelector("#input-wk-name")?.value?.trim();
         const weekdayLabel = modal.querySelector("#input-wk-weekday")?.value?.trim();
         if (!name) {
@@ -1544,10 +1714,8 @@ header.app-header {
           if (isEdit) {
             await this.app.api("updateWorkout", {
               id: workout.id,
-              name,
-              weekdayLabel,
-              positions,
-              revision: workout.revision
+              data: { name, weekdayLabel, positions },
+              expectedRevision: workout.revision
             });
           } else {
             await this.app.api("createWorkout", {
@@ -1561,7 +1729,7 @@ header.app-header {
         } catch (err) {
           alert("Failed to save workout: " + err.message);
         }
-      });
+      }));
     }
     openExercisePicker(onSelect) {
       const modal = document.createElement("div");
@@ -1681,6 +1849,16 @@ header.app-header {
               <div class="metadata-text" style="margin-top: 6px;">
                 ${setsCount} working sets logged
               </div>
+              <p class="metadata-text">
+                ${s.publication === "pending" ? this.app.offline.status.error ? `<span style="color: var(--accent-danger); font-size: 0.85rem;">Saved on device \xB7 upload failed (${this.app.offline.status.error})</span>` : "Saved on this device \xB7 waiting to upload" : "Saved to Sheets"}
+              </p>
+              ${s.publication === "pending" ? `
+                <div style="margin-top: 8px;">
+                  <button class="btn btn-secondary btn-sm btn-retry-session-upload" data-session-id="${s.id}" ${this.app.offline.status.uploading ? "disabled" : ""}>
+                    ${this.app.offline.status.uploading ? "Uploading\u2026" : "Upload now"}
+                  </button>
+                </div>
+              ` : ""}
 
               ${note ? `
                 <div style="margin-top: 10px; padding: 8px 12px; background: var(--bg-surface-raised); border-radius: 8px; font-size: 0.9rem; font-style: italic;">
@@ -1786,6 +1964,20 @@ header.app-header {
           alert("Failed to load exercise history: " + err.message);
         }
       });
+      container.querySelectorAll(".btn-retry-session-upload").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          btn.disabled = true;
+          btn.textContent = "Uploading\u2026";
+          try {
+            await this.app.offline.upload();
+            await this.app.refresh();
+          } catch (err) {
+            alert("Upload failed: " + err.message);
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      });
     }
     updateExerciseResults(container) {
       const resultsEl = container.querySelector("#exercise-history-results");
@@ -1816,7 +2008,7 @@ header.app-header {
       if (!pos) return null;
       const session = this.app.activeSession;
       const chosenExId = session.progress?.selectedAlternatives?.[pos.id] || session.chosenExercises?.[pos.id] || pos.exerciseId;
-      return this.app.exercises.find((e) => e.id === chosenExId) || { id: chosenExId, name: "Exercise", recordingKind: "reps_weight" };
+      return pos.allowedExercises?.find((e) => e.id === chosenExId) || this.app.exercises.find((e) => e.id === chosenExId) || { id: chosenExId, name: "Exercise", recordingKind: "reps_weight" };
     }
     render() {
       const session = this.app.activeSession;
@@ -2133,7 +2325,7 @@ header.app-header {
         const isWarmup = this.isWarmup;
         const allPosLogs = (session.setLogs || []).filter((l) => l.positionId === pos.id && !l.voidedAt);
         const setIndex = isWarmup ? allPosLogs.filter((l) => l.isWarmup).length + 1 : allPosLogs.filter((l) => !l.isWarmup).length + 1;
-        await this.app.logSet({
+        const saved = await this.app.logSet({
           positionId: pos.id,
           exerciseId: exercise.id,
           setIndex,
@@ -2141,7 +2333,7 @@ header.app-header {
           result: { weight, reps },
           restSeconds: pos.restSeconds || 90
         });
-        this.isWarmup = false;
+        if (saved) this.isWarmup = false;
       });
       container.querySelectorAll(".btn-undo-set").forEach((btn) => {
         btn.addEventListener("click", async () => {
@@ -2154,17 +2346,13 @@ header.app-header {
       });
       container.querySelector("#btn-prev-exercise")?.addEventListener("click", () => {
         if (this.currentPositionIndex > 0) {
-          this.currentPositionIndex--;
-          this.resetEntryInputs();
-          this.app.render();
+          this.moveTo(this.currentPositionIndex - 1);
         }
       });
       container.querySelector("#btn-next-exercise")?.addEventListener("click", () => {
         const total = session.plan?.positions?.length || 0;
         if (this.currentPositionIndex < total - 1) {
-          this.currentPositionIndex++;
-          this.resetEntryInputs();
-          this.app.render();
+          this.moveTo(this.currentPositionIndex + 1);
         }
       });
       container.querySelector("#btn-finish-session")?.addEventListener("click", () => {
@@ -2184,6 +2372,19 @@ header.app-header {
       this.weightInputVal = null;
       this.repsInputVal = null;
       this.isWarmup = false;
+    }
+    async moveTo(index) {
+      try {
+        await this.app.api("updateSessionProgress", {
+          sessionId: this.app.activeSession.id,
+          progress: { currentPositionIndex: index }
+        });
+        this.currentPositionIndex = index;
+        this.resetEntryInputs();
+        this.app.render();
+      } catch (error) {
+        alert("Couldn\u2019t save your place on this device: " + error.message);
+      }
     }
     openOutlineModal() {
       const session = this.app.activeSession;
@@ -2223,17 +2424,159 @@ header.app-header {
       });
       modal.querySelectorAll("[data-nav-idx]").forEach((item) => {
         item.addEventListener("click", () => {
-          this.currentPositionIndex = parseInt(item.dataset.navIdx, 10);
-          this.resetEntryInputs();
           modal.remove();
-          this.app.render();
+          this.moveTo(parseInt(item.dataset.navIdx, 10));
         });
       });
     }
   };
 
+  // src/client/data-status.js
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    })[char]);
+  }
+  function spreadsheetLink(url) {
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === "https:" && parsed.hostname === "docs.google.com" && parsed.pathname.startsWith("/spreadsheets/") ? parsed.href : "";
+    } catch {
+      return "";
+    }
+  }
+  function timeLabel(value) {
+    return value ? new Date(value).toLocaleString(void 0, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    }) : "Not yet";
+  }
+  var DataStatus = class {
+    constructor(app2) {
+      this.app = app2;
+      transport.connection.subscribe(() => this.update());
+      window.addEventListener("online", () => this.update());
+      window.addEventListener("offline", () => this.update());
+      document.querySelector("#btn-data-status")?.addEventListener("click", () => this.open());
+    }
+    get configured() {
+      return transport.isGas || transport.isLocalDev || Boolean(transport.getRemoteConfig().gasUrl);
+    }
+    get source() {
+      return transport.isLocalDev && !transport.getRemoteConfig().gasUrl && !transport.isGas ? "Preview server" : "Google Sheets";
+    }
+    presentation() {
+      const state = transport.connection.snapshot();
+      const local = this.app.offline.status;
+      const source = this.source === "Google Sheets" ? "Sheets" : "preview";
+      if (this.app.localError) return { tone: "error", label: "Device save needs attention \xB7 View details", icon: "!" };
+      if (local.uploading && (local.pendingSessions || local.pendingLibrary)) return { tone: "loading", label: "Uploading saved changes\u2026", icon: "\u21BB" };
+      if (local.error) return { tone: "error", label: "Saved on device \xB7 upload failed", icon: "!" };
+      if (local.pendingSessions) return { tone: "warning", label: `${local.pendingSessions} completed workout${local.pendingSessions === 1 ? "" : "s"} waiting to upload`, icon: "\u2191" };
+      if (local.pendingLibrary) return { tone: "warning", label: "Workout changes waiting to upload", icon: "\u2191" };
+      if (local.ready && this.app.activeSession) return { tone: "idle", label: `Saved on this device${navigator.onLine === false ? " \xB7 Offline" : ""}`, icon: "\u2713" };
+      if (!this.configured) return { tone: "idle", label: "Connect Google Sheets", icon: "\u25CB" };
+      if (state.loading) return { tone: "loading", label: this.app.connecting ? "Preparing and loading\u2026" : state.lastChecked ? "Checking for updates\u2026" : `Loading from ${source}\u2026`, icon: "\u21BB" };
+      if (local.ready && navigator.onLine === false) return { tone: "idle", label: "Offline \xB7 Workouts saved on device", icon: "\u2713" };
+      if (this.app.loadError || state.readError) return { tone: "warning", label: local.ready ? "Using device copy \xB7 Refresh unavailable" : "Couldn\u2019t load workouts \xB7 Retry", icon: "!" };
+      if (local.libraryChanges) return { tone: "idle", label: "Workout edits saved on device", icon: "\u2713" };
+      if (local.lastUploadedAt) return { tone: "success", label: `Saved to ${source} \xB7 ${timeLabel(local.lastUploadedAt)}`, icon: "\u2713" };
+      if (local.ready) return { tone: "idle", label: this.app.offlineShellReady ? "Ready for offline training" : "Workouts saved on device", icon: "\u2713" };
+      return { tone: "idle", label: "Connection not checked", icon: "\u25CB" };
+    }
+    update() {
+      const { tone, label, icon } = this.presentation();
+      const button = document.querySelector("#btn-data-status");
+      if (button) {
+        button.dataset.tone = tone;
+        button.querySelector(".connection-icon").textContent = icon;
+        const text = button.querySelector(".connection-label");
+        if (text.textContent !== label) text.textContent = label;
+      }
+      const content = document.querySelector("#data-status-content");
+      if (content) content.innerHTML = this.details();
+      const refresh = document.querySelector("#btn-check-sheets");
+      if (refresh) {
+        refresh.disabled = this.app.loading || transport.connection.snapshot().pendingCount > 0 || !this.configured;
+        refresh.textContent = this.app.loading ? "Checking\u2026" : "Refresh from Sheets";
+      }
+      const connect = document.querySelector("#btn-test-connection");
+      if (connect) connect.disabled = this.app.connecting || this.app.loading || this.app.busyActions.size > 0 || this.app.offline.status.uploading || transport.connection.snapshot().pendingCount > 0;
+      const upload = document.querySelector("#btn-upload-workouts");
+      if (upload) upload.disabled = this.app.offline.status.uploading || navigator.onLine === false || !(this.app.offline.status.pendingSessions || this.app.offline.status.pendingLibrary);
+      const publish = document.querySelector("#btn-publish-library");
+      if (publish) publish.disabled = this.app.offline.status.uploading || !this.app.offline.status.libraryChanges;
+    }
+    details() {
+      const state = transport.connection.snapshot();
+      const local = this.app.offline.status;
+      const legacyQueue = transport.getPendingQueue().length;
+      const link = spreadsheetLink(this.app.spreadsheetUrl);
+      return `
+      <p class="connection-summary">${escapeHtml(this.presentation().label)}</p>
+      <dl class="connection-facts">
+        <dt>Data source</dt><dd>${this.configured ? this.source : "Not connected"}</dd>
+        <dt>Last downloaded</dt><dd>${escapeHtml(timeLabel(local.downloadedAt))}</dd>
+        <dt>Last upload confirmed</dt><dd>${escapeHtml(timeLabel(local.lastUploadedAt))}</dd>
+        <dt>Workouts awaiting upload</dt><dd>${local.pendingSessions || 0}</dd>
+        <dt>Unpublished library edits</dt><dd>${local.libraryChanges || 0}</dd>
+      </dl>
+      ${link ? `<a class="btn btn-secondary" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">Open connected spreadsheet \u2197</a>` : '<p class="metadata-text">The server has not identified a connected spreadsheet yet.</p>'}
+      <p class="metadata-text">Training is saved on this device after each action. Only completed sessions upload automatically. Unfinished sessions are available on this device only.</p>
+      <p class="metadata-text">${this.app.offlineShellReady && local.ready ? "Ready for offline training: both the app and your workouts are stored here." : "Workout data is stored separately from the app files. Open the installed PWA online once before relying on offline reopening."}</p>
+      <p class="metadata-text">Uploads retry when connected with the app open or when you reopen it. Library edits publish separately. Refreshing preserves your local sessions and edits.</p>
+      ${local.error ? `<p class="connection-error">Your data is saved on this device. Upload failed: ${escapeHtml(local.error)} Retry uses the same upload ID to avoid duplicates.</p>` : ""}
+      ${this.app.localError ? `<p class="connection-error">${escapeHtml(this.app.localError)} Keep this screen open until the save succeeds.</p>` : ""}
+      ${this.app.loadError || state.readError ? `<p class="connection-warning">Couldn\u2019t refresh: ${escapeHtml(this.app.loadError || state.readError)} Your device copy is unchanged.</p>` : ""}
+      ${legacyQueue ? `<p class="connection-warning">${legacyQueue} entries from the older per-set queue remain on this device. They are preserved, but will not be sent to an unverified spreadsheet.</p>` : ""}
+    `;
+    }
+    open() {
+      if (document.querySelector("#data-status-dialog")) return;
+      const dialog = document.createElement("dialog");
+      dialog.id = "data-status-dialog";
+      dialog.className = "connection-dialog";
+      dialog.setAttribute("aria-labelledby", "data-status-title");
+      dialog.innerHTML = `
+      <div class="modal-header"><h2 id="data-status-title" class="modal-title">Data & connection</h2>
+        <button class="btn btn-quiet btn-sm" id="btn-close-data-status" aria-label="Close connection details">\u2715</button></div>
+      <div id="data-status-content" class="connection-details"></div>
+      <div class="connection-actions">
+        <button class="btn btn-primary" id="btn-check-sheets">Refresh from Sheets</button>
+        <button class="btn btn-primary" id="btn-upload-workouts">Upload now</button>
+        <button class="btn btn-secondary" id="btn-publish-library">Publish workout changes</button>
+        <button class="btn btn-secondary" id="btn-connection-settings">Connection settings</button>
+      </div>`;
+      document.body.appendChild(dialog);
+      const close = () => dialog.close();
+      dialog.querySelector("#btn-close-data-status").addEventListener("click", close);
+      dialog.addEventListener("close", () => {
+        dialog.remove();
+        document.querySelector("#btn-data-status")?.focus();
+      });
+      dialog.addEventListener("click", (event) => {
+        if (event.target === dialog) close();
+      });
+      dialog.querySelector("#btn-check-sheets").addEventListener("click", () => this.app.refresh({ remote: true }));
+      dialog.querySelector("#btn-upload-workouts").addEventListener("click", () => this.app.uploadCompleted());
+      dialog.querySelector("#btn-publish-library").addEventListener("click", () => this.app.publishWorkoutChanges());
+      dialog.querySelector("#btn-connection-settings").addEventListener("click", () => {
+        close();
+        this.app.openSettingsModal();
+      });
+      this.update();
+      dialog.showModal();
+    }
+  };
+
   // src/client/views/settings.js
-  function escapeHtml(str) {
+  function escapeHtml2(str) {
     if (!str) return "";
     return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
@@ -2244,7 +2587,8 @@ header.app-header {
     render() {
       const currentPref = themeManager.getPreference();
       const currentUnit = localStorage.getItem("my_gym_units") || "kg";
-      const spreadsheetUrl = this.app.spreadsheetUrl || localStorage.getItem("my_gym_spreadsheet_url") || "";
+      const spreadsheetUrl = spreadsheetLink(this.app.spreadsheetUrl);
+      const shortcutUrl = spreadsheetLink(localStorage.getItem("my_gym_spreadsheet_url"));
       const remoteConfig = transport.getRemoteConfig();
       return `
       <div class="modal-overlay" id="settings-overlay">
@@ -2279,37 +2623,41 @@ header.app-header {
             <div style="border-top: 1px solid var(--border-subtle); padding-top: 16px;">
               <label class="form-label">Cloud Connection (Google Sheets)</label>
               <p class="metadata-text" style="margin-bottom: 12px;">
-                Connect your personal Google Apps Script Web App for sync across devices and offline backup to Google Sheets.
+                Download your workouts once, then train offline. Completed sessions upload to this spreadsheet when connected.
               </p>
               <div class="form-group" style="margin-bottom: 12px;">
-                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Apps Script Web App URL</label>
-                <input type="url" id="setting-gas-url" class="form-input" placeholder="https://script.google.com/macros/s/.../exec" value="${escapeHtml(remoteConfig.gasUrl)}">
+                <label for="setting-gas-url" class="form-label" style="font-size: 0.8rem; font-weight: 600;">Apps Script Web App URL</label>
+                <input type="url" id="setting-gas-url" class="form-input" placeholder="https://script.google.com/macros/s/.../exec" value="${escapeHtml2(remoteConfig.gasUrl)}">
               </div>
               <div class="form-group" style="margin-bottom: 12px;">
-                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">API Secret Token (Optional)</label>
-                <input type="password" id="setting-api-token" class="form-input" placeholder="Personal secret password" value="${escapeHtml(remoteConfig.apiToken)}">
+                <label for="setting-api-token" class="form-label" style="font-size: 0.8rem; font-weight: 600;">API Secret Token (Optional)</label>
+                <input type="password" id="setting-api-token" class="form-input" placeholder="Personal secret password" value="${escapeHtml2(remoteConfig.apiToken)}">
               </div>
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                <button class="btn btn-secondary btn-sm" id="btn-test-connection">Test Connection</button>
-                <span id="connection-status-pill" class="status-pill status-idle">Not tested</span>
+              <div class="connection-actions">
+                <button class="btn btn-primary" id="btn-test-connection" ${this.app.loading || transport.connection.snapshot().pendingCount ? "disabled" : ""}>Connect & load workouts</button>
               </div>
+              <p id="connection-status-pill" class="connection-feedback" role="status" aria-live="polite">${this.app.connecting ? "Preparing your spreadsheet and loading workouts\u2026" : escapeHtml2(this.connectionFeedback || "Connection changes apply when you choose Connect & load workouts.")}</p>
+              <p class="metadata-text" data-loading-hint>${this.app.connecting ? "First-time setup can take longer." : "A new spreadsheet will be prepared with the starter workouts. Local sessions and pending uploads stay with their original connection."}</p>
             </div>
 
             <!-- Exercises Spreadsheet Link -->
             <div style="border-top: 1px solid var(--border-subtle); padding-top: 16px;">
-              <label class="form-label">Exercises & Data Spreadsheet</label>
-              <p class="metadata-text" style="margin-bottom: 12px;">Direct link to your Google Sheets database with exercises, workouts, and logs.</p>
+              <label class="form-label">Connected spreadsheet</label>
+              <p class="metadata-text" style="margin-bottom: 12px;">The data source reported by your Apps Script connection. A saved shortcut does not change this source.</p>
               ${spreadsheetUrl ? `
-                <a href="${spreadsheetUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" id="link-open-spreadsheet" style="width: 100%; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <a href="${escapeHtml2(spreadsheetUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" id="link-open-spreadsheet" style="width: 100%; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
                   <span>\u{1F4CA}</span>
-                  <span>Open Exercises Spreadsheet</span>
+                  <span>Open connected spreadsheet</span>
                   <span style="font-size: 0.85rem; opacity: 0.7;">\u2197</span>
                 </a>
               ` : `
                 <div style="display: flex; flex-direction: column; gap: 8px;">
-                  <input type="url" class="form-input" id="input-spreadsheet-url" placeholder="https://docs.google.com/spreadsheets/d/..." value="">
+                  <p class="metadata-text">No spreadsheet has been identified yet. Connect and load above.</p>
+                  ${shortcutUrl ? `<a href="${escapeHtml2(shortcutUrl)}" target="_blank" rel="noopener noreferrer">Open saved shortcut (not verified as the data source) \u2197</a>` : ""}
+                  <label for="input-spreadsheet-url" class="form-label">Optional spreadsheet shortcut</label>
+                  <input type="url" class="form-input" id="input-spreadsheet-url" placeholder="https://docs.google.com/spreadsheets/d/..." value="${escapeHtml2(shortcutUrl)}">
                   <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-secondary btn-sm" id="btn-save-spreadsheet-url" style="flex: 1;">Save URL</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-save-spreadsheet-url" style="flex: 1;">Save shortcut</button>
                     <a href="https://docs.google.com/spreadsheets" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Open Google Sheets \u2197</a>
                   </div>
                 </div>
@@ -2345,16 +2693,12 @@ header.app-header {
       const tokenInput = container.querySelector("#setting-api-token");
       const btnTest = container.querySelector("#btn-test-connection");
       const statusPill = container.querySelector("#connection-status-pill");
-      const saveCloudConfig = () => {
-        if (urlInput || tokenInput) {
-          transport.setRemoteConfig({
-            gasUrl: urlInput ? urlInput.value.trim() : void 0,
-            apiToken: tokenInput ? tokenInput.value.trim() : void 0
-          });
-        }
-      };
+      if (this.app.connecting) {
+        container.querySelectorAll("input, button").forEach((el) => {
+          if (el !== closeBtn) el.disabled = true;
+        });
+      }
       const close = () => {
-        saveCloudConfig();
         container.innerHTML = "";
       };
       closeBtn?.addEventListener("click", close);
@@ -2362,30 +2706,68 @@ header.app-header {
         if (e.target === overlay) close();
       });
       btnTest?.addEventListener("click", async () => {
+        if (this.app.loading || this.app.offline.status.uploading || transport.connection.snapshot().pendingCount) return;
         const gasUrl = urlInput ? urlInput.value.trim() : "";
         const apiToken = tokenInput ? tokenInput.value.trim() : "";
         if (!gasUrl && !transport.isLocalDev && !transport.isGas) {
           if (statusPill) {
-            statusPill.className = "status-pill status-error";
-            statusPill.textContent = "URL required";
+            statusPill.className = "connection-feedback connection-error";
+            statusPill.textContent = "Enter your Apps Script Web App URL.";
           }
           return;
         }
-        transport.setRemoteConfig({ gasUrl, apiToken });
-        if (statusPill) {
-          statusPill.className = "status-pill status-loading";
-          statusPill.textContent = "Testing...";
-        }
+        const previousConfig = transport.getRemoteConfig();
+        this.connectionFeedback = null;
+        this.app.connecting = true;
+        const controls = [...container.querySelectorAll("input, button")].filter((el) => el !== closeBtn);
+        controls.forEach((el) => {
+          el.disabled = true;
+        });
+        btnTest.textContent = "Preparing and loading\u2026";
+        statusPill.className = "connection-feedback";
+        statusPill.textContent = "Preparing your spreadsheet and loading workouts\u2026";
         try {
-          await transport.testConnection();
-          if (statusPill) {
-            statusPill.className = "status-pill status-success";
-            statusPill.textContent = "Connected \u{1F7E2}";
+          transport.setRemoteConfig({ gasUrl, apiToken });
+          if (previousConfig.gasUrl !== gasUrl || previousConfig.apiToken !== apiToken) {
+            this.app.loaded = false;
+            this.app.workouts = [];
+            this.app.exercises = [];
+            this.app.history = [];
+            this.app.activeSession = null;
+            this.app.benchmarks = {};
+            this.app.spreadsheetUrl = null;
+            this.app.endRestTimer();
+            this.app.activeTab = "today";
           }
+          const ready = await this.app.offline.select(this.app.connectionKey());
+          if (ready) await this.app.refresh();
+          const loaded = navigator.onLine === false && ready ? true : await this.app.refresh({ remote: true });
+          if (!loaded) throw new Error(this.app.loadError || "Could not load workouts.");
+          this.connectionFeedback = `Saved ${this.app.workouts.length} workouts and ${this.app.exercises.length} exercises on this device. You can train without a connection.`;
         } catch (err) {
-          if (statusPill) {
-            statusPill.className = "status-pill status-error";
-            statusPill.textContent = err.message.includes("Unauthorized") ? "Unauthorized \u{1F534}" : "Failed \u{1F534}";
+          this.connectionFeedback = null;
+          statusPill.className = "connection-feedback connection-error";
+          const msg = err.message || "Unknown error.";
+          if (msg.includes("Apps Script") || msg.includes("offline sync")) {
+            statusPill.textContent = `Couldn\u2019t connect and load. ${msg}`;
+          } else {
+            statusPill.textContent = `Couldn\u2019t connect and load. ${msg} Check your URL and token, then try again.`;
+          }
+        } finally {
+          this.app.connecting = false;
+          controls.forEach((el) => {
+            el.disabled = false;
+          });
+          btnTest.textContent = "Connect & load workouts";
+          this.app.dataStatus.update();
+          this.app.uploadCompleted();
+          if (this.connectionFeedback && container.contains(overlay)) {
+            container.innerHTML = this.render();
+            this.attachEvents(container);
+            container.querySelector("#btn-test-connection")?.focus();
+          } else if (!container.contains(overlay) && container.querySelector("#settings-overlay")) {
+            container.innerHTML = this.render();
+            this.attachEvents(container);
           }
         }
       });
@@ -2427,7 +2809,7 @@ header.app-header {
         try {
           const text = await file.text();
           const data = JSON.parse(text);
-          await this.app.api("restoreData", { backup: data });
+          await this.app.api("restoreData", { data });
           alert("Backup restored successfully!");
           close();
           await this.app.refresh();
@@ -2437,19 +2819,1782 @@ header.app-header {
       });
       container.querySelector("#btn-save-spreadsheet-url")?.addEventListener("click", () => {
         const input = container.querySelector("#input-spreadsheet-url");
-        const val = input?.value?.trim();
+        const val = spreadsheetLink(input?.value?.trim());
         if (val) {
           localStorage.setItem("my_gym_spreadsheet_url", val);
-          this.app.spreadsheetUrl = val;
-          alert("Spreadsheet URL saved!");
+          alert("Shortcut saved. Your connected data source has not changed.");
           container.innerHTML = this.render();
           this.attachEvents(container);
+        } else {
+          input?.setCustomValidity("Enter a Google Sheets URL beginning with https://docs.google.com/spreadsheets/.");
+          input?.reportValidity();
         }
       });
     }
   };
 
+  // src/storage/in-memory-storage.js
+  var InMemoryStorage = class {
+    constructor() {
+      this.settings = {
+        schemaVersion: 1,
+        timezone: "America/Sao_Paulo",
+        defaultUnits: "kg",
+        seedVersion: 0
+      };
+      this.exercises = /* @__PURE__ */ new Map();
+      this.workouts = /* @__PURE__ */ new Map();
+      this.sessions = /* @__PURE__ */ new Map();
+      this.setLogs = /* @__PURE__ */ new Map();
+      this.appliedRequests = /* @__PURE__ */ new Map();
+    }
+    initSchema() {
+      return { success: true };
+    }
+    getSpreadsheetUrl() {
+      return "https://docs.google.com/spreadsheets/d/mock-dev-spreadsheet/edit";
+    }
+    runExclusive(action) {
+      return action();
+    }
+    getSettings() {
+      return { ...this.settings };
+    }
+    saveSettings(settings) {
+      this.settings = { ...this.settings, ...settings };
+      return { ...this.settings };
+    }
+    getExercises({ includeArchived = false } = {}) {
+      const list = Array.from(this.exercises.values());
+      if (includeArchived) return list;
+      return list.filter((ex) => !ex.archivedAt);
+    }
+    getExercise(id) {
+      return this.exercises.get(id) || null;
+    }
+    saveExercise(exercise) {
+      const existing = this.exercises.get(exercise.id);
+      const revision = (existing?.revision || 0) + 1;
+      const record = {
+        ...exercise,
+        revision,
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      if (!existing) {
+        record.createdAt = record.updatedAt;
+      }
+      this.exercises.set(exercise.id, record);
+      return record;
+    }
+    getWorkouts({ includeArchived = false } = {}) {
+      const list = Array.from(this.workouts.values());
+      if (includeArchived) return list;
+      return list.filter((w) => !w.archivedAt);
+    }
+    getWorkout(id) {
+      return this.workouts.get(id) || null;
+    }
+    saveWorkout(workout) {
+      const existing = this.workouts.get(workout.id);
+      const revision = (existing?.revision || 0) + 1;
+      const record = {
+        ...workout,
+        revision,
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      if (!existing) {
+        record.createdAt = record.updatedAt;
+      }
+      this.workouts.set(workout.id, record);
+      return record;
+    }
+    getActiveSession() {
+      const active = Array.from(this.sessions.values()).find((s) => s.status === "in_progress");
+      return active || null;
+    }
+    getSession(id) {
+      return this.sessions.get(id) || null;
+    }
+    saveSession(session) {
+      const existing = this.sessions.get(session.id);
+      const revision = (existing?.revision || 0) + 1;
+      const record = {
+        ...session,
+        revision,
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      if (!existing) {
+        record.createdAt = record.updatedAt;
+      }
+      this.sessions.set(session.id, record);
+      return record;
+    }
+    getSetLogs(sessionId) {
+      return Array.from(this.setLogs.values()).filter((s) => s.sessionId === sessionId && !s.voidedAt).sort((a, b) => new Date(a.recordedTime).getTime() - new Date(b.recordedTime).getTime());
+    }
+    saveSetLog(setLog) {
+      const existing = this.setLogs.get(setLog.id);
+      const revision = (existing?.revision || 0) + 1;
+      const record = {
+        ...setLog,
+        revision,
+        recordedTime: setLog.recordedTime || (/* @__PURE__ */ new Date()).toISOString()
+      };
+      this.setLogs.set(setLog.id, record);
+      return record;
+    }
+    getSetLog(id) {
+      return this.setLogs.get(id) || null;
+    }
+    getSessions({ status = null, limit = 50 } = {}) {
+      let list = Array.from(this.sessions.values()).filter((session) => session.status !== "uploading");
+      if (status) {
+        list = list.filter((s) => s.status === status);
+      }
+      return list.sort((a, b) => new Date(b.startedAt || b.createdAt).getTime() - new Date(a.startedAt || a.createdAt).getTime()).slice(0, limit);
+    }
+    getAllSetLogsForExercise(exerciseId, { limit = 50 } = {}) {
+      return Array.from(this.setLogs.values()).filter((l) => {
+        if (l.exerciseId !== exerciseId || l.voidedAt) return false;
+        const s = this.sessions.get(l.sessionId);
+        return !s || s.status !== "uploading";
+      }).sort((a, b) => new Date(b.recordedTime).getTime() - new Date(a.recordedTime).getTime()).slice(0, limit);
+    }
+    exportAll() {
+      return {
+        version: 1,
+        exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        settings: { ...this.settings },
+        exercises: Array.from(this.exercises.values()),
+        workouts: Array.from(this.workouts.values()),
+        sessions: Array.from(this.sessions.values()),
+        setLogs: Array.from(this.setLogs.values())
+      };
+    }
+    importAll(data) {
+      if (!data || typeof data !== "object") throw new Error("Invalid backup data");
+      if (data.settings) this.settings = { ...this.settings, ...data.settings };
+      if (Array.isArray(data.exercises)) {
+        this.exercises.clear();
+        for (const ex of data.exercises) this.exercises.set(ex.id, ex);
+      }
+      if (Array.isArray(data.workouts)) {
+        this.workouts.clear();
+        for (const wk of data.workouts) this.workouts.set(wk.id, wk);
+      }
+      if (Array.isArray(data.sessions)) {
+        this.sessions.clear();
+        for (const ses of data.sessions) this.sessions.set(ses.id, ses);
+      }
+      if (Array.isArray(data.setLogs)) {
+        this.setLogs.clear();
+        for (const set of data.setLogs) this.setLogs.set(set.id, set);
+      }
+      return { success: true };
+    }
+    getLatestSetsForExercise(exerciseId, resistanceSetup = null) {
+      const completedSessions = Array.from(this.sessions.values()).filter((s) => s.status === "completed").sort((a, b) => new Date(b.finishedAt || b.updatedAt).getTime() - new Date(a.finishedAt || a.updatedAt).getTime());
+      for (const session of completedSessions) {
+        const logs = Array.from(this.setLogs.values()).filter(
+          (l) => l.sessionId === session.id && l.exerciseId === exerciseId && !l.voidedAt && !l.isWarmup
+        );
+        if (logs.length > 0) {
+          return {
+            sessionDate: session.finishedAt || session.createdAt,
+            sessionId: session.id,
+            workoutName: session.workoutName,
+            exerciseNote: session.progress?.exerciseNotes?.[exerciseId] || null,
+            sets: logs.sort((a, b) => (a.setIndex || 0) - (b.setIndex || 0))
+          };
+        }
+      }
+      return null;
+    }
+  };
+
+  // src/app/initial-workouts.js
+  var initialWorkoutsData = {
+    "version": 1,
+    "exercises": [
+      {
+        "id": "ex_bb_bench",
+        "name": "Barbell Bench Press",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "barbell",
+        "isPerLeg": false,
+        "instructions": "Focus on explosive concentric. Total weight includes bar."
+      },
+      {
+        "id": "ex_bb_row",
+        "name": "Barbell Row",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "barbell",
+        "isPerLeg": false,
+        "instructions": "Pull to the hip."
+      },
+      {
+        "id": "ex_db_row",
+        "name": "Dumbbell Row",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "dumbbell",
+        "isPerLeg": false,
+        "instructions": "Pull to the hip. Weight per dumbbell."
+      },
+      {
+        "id": "ex_ohp_standing",
+        "name": "Standing Overhead Press",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "barbell",
+        "isPerLeg": false,
+        "instructions": "Keep core braced. Total weight includes bar."
+      },
+      {
+        "id": "ex_ohp_seated",
+        "name": "Seated Overhead Press",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "dumbbell",
+        "isPerLeg": false,
+        "instructions": "Keep core braced. Weight per dumbbell."
+      },
+      {
+        "id": "ex_pullup",
+        "name": "Pull-ups",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "bodyweight",
+        "isPerLeg": false,
+        "instructions": "Use assistance band or added weight if needed."
+      },
+      {
+        "id": "ex_band_lat_pulldown",
+        "name": "Band Lat Pulldowns",
+        "recordingKind": "reps_band",
+        "equipmentConvention": "band",
+        "isPerLeg": false,
+        "instructions": "Anchor band high. Pull elbows down."
+      },
+      {
+        "id": "ex_db_lateral_raise",
+        "name": "Dumbbell Lateral Raises",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "dumbbell",
+        "isPerLeg": false,
+        "instructions": "Control the eccentric (lowering) phase. Weight per dumbbell."
+      },
+      {
+        "id": "ex_band_tricep_pushdown",
+        "name": "Resistance Band Tricep Pushdowns",
+        "recordingKind": "reps_band",
+        "equipmentConvention": "band",
+        "isPerLeg": false,
+        "instructions": "Squeeze at the bottom."
+      },
+      {
+        "id": "ex_bb_back_squat",
+        "name": "Barbell Back Squat",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "barbell",
+        "isPerLeg": false,
+        "instructions": "Break parallel if mobility allows. Total weight includes bar."
+      },
+      {
+        "id": "ex_bb_rdl",
+        "name": "Romanian Deadlift (RDL)",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "barbell",
+        "isPerLeg": false,
+        "instructions": "Hinge at the hips, slight knee bend. Total weight includes bar."
+      },
+      {
+        "id": "ex_bulgarian_split_squat",
+        "name": "Bulgarian Split Squats",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "dumbbell",
+        "isPerLeg": true,
+        "instructions": "Keep front foot flat. Repetitions per leg. Weight per dumbbell."
+      },
+      {
+        "id": "ex_band_leg_curl",
+        "name": "Resistance Band Leg Curls",
+        "recordingKind": "reps_band",
+        "equipmentConvention": "band",
+        "isPerLeg": false,
+        "instructions": "Anchor band to a sturdy low point."
+      },
+      {
+        "id": "ex_standing_calf_raise",
+        "name": "Standing Calf Raises",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "bodyweight",
+        "isPerLeg": false,
+        "instructions": "Pause for 1 sec at the bottom stretch."
+      },
+      {
+        "id": "ex_incline_db_press",
+        "name": "Incline Dumbbell Press",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "dumbbell",
+        "isPerLeg": false,
+        "instructions": "Set bench to 30\u201345 degrees. Weight per dumbbell."
+      },
+      {
+        "id": "ex_band_seated_row",
+        "name": "Resistance Band Seated Row",
+        "recordingKind": "reps_band",
+        "equipmentConvention": "band",
+        "isPerLeg": false,
+        "instructions": "Squeeze shoulder blades together."
+      },
+      {
+        "id": "ex_pushup",
+        "name": "Push-ups",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "bodyweight",
+        "isPerLeg": false,
+        "instructions": "AMRAP on last set. Bodyweight or added weight."
+      },
+      {
+        "id": "ex_band_face_pull",
+        "name": "Resistance Band Face Pulls",
+        "recordingKind": "reps_band",
+        "equipmentConvention": "band",
+        "isPerLeg": false,
+        "instructions": "Pull toward the bridge of the nose."
+      },
+      {
+        "id": "ex_db_bicep_curl",
+        "name": "Dumbbell Bicep Curls",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "dumbbell",
+        "isPerLeg": false,
+        "instructions": "Keep elbows pinned to your sides. Weight per dumbbell."
+      },
+      {
+        "id": "ex_db_overhead_tricep_ext",
+        "name": "Overhead Dumbbell Tricep Extension",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "dumbbell",
+        "isPerLeg": false,
+        "instructions": "Full stretch at the bottom."
+      },
+      {
+        "id": "ex_band_overhead_tricep_ext",
+        "name": "Overhead Band Tricep Extension",
+        "recordingKind": "reps_band",
+        "equipmentConvention": "band",
+        "isPerLeg": false,
+        "instructions": "Full stretch at the bottom."
+      },
+      {
+        "id": "ex_deadlift_conventional",
+        "name": "Conventional Deadlift",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "barbell",
+        "isPerLeg": false,
+        "instructions": "Warm up thoroughly. Total weight includes bar."
+      },
+      {
+        "id": "ex_deadlift_sumo",
+        "name": "Sumo Deadlift",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "barbell",
+        "isPerLeg": false,
+        "instructions": "Warm up thoroughly. Total weight includes bar."
+      },
+      {
+        "id": "ex_front_squat",
+        "name": "Front Squat",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "barbell",
+        "isPerLeg": false,
+        "instructions": "Keep torso upright. Total weight includes bar."
+      },
+      {
+        "id": "ex_goblet_squat",
+        "name": "Goblet Squat",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "dumbbell",
+        "isPerLeg": false,
+        "instructions": "Keep torso upright."
+      },
+      {
+        "id": "ex_walking_lunges",
+        "name": "Walking Lunges",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "dumbbell",
+        "isPerLeg": true,
+        "instructions": "Take long strides for glute focus. Repetitions per leg."
+      },
+      {
+        "id": "ex_band_leg_ext",
+        "name": "Resistance Band Leg Extensions",
+        "recordingKind": "reps_band",
+        "equipmentConvention": "band",
+        "isPerLeg": false,
+        "instructions": "Squeeze quads at the top."
+      },
+      {
+        "id": "ex_seated_calf_raise",
+        "name": "Seated Calf Raises",
+        "recordingKind": "reps_weight",
+        "equipmentConvention": "machine_or_dumbbell",
+        "isPerLeg": false,
+        "instructions": "Focus on the contraction."
+      }
+    ],
+    "workouts": [
+      {
+        "id": "wk_upper_1",
+        "name": "Upper Body 1 (Strength Focus)",
+        "weekdayLabel": "Monday",
+        "positions": [
+          {
+            "id": "pos_u1_1",
+            "exerciseId": "ex_bb_bench",
+            "allowedExerciseIds": ["ex_bb_bench"],
+            "instructions": "Focus on explosive concentric",
+            "restSeconds": 180,
+            "targetRpe": "8",
+            "plannedSets": [
+              { "id": "ps_u1_1_1", "repsTarget": "4-6", "targetRpe": "8" },
+              { "id": "ps_u1_1_2", "repsTarget": "4-6", "targetRpe": "8" },
+              { "id": "ps_u1_1_3", "repsTarget": "4-6", "targetRpe": "8" }
+            ]
+          },
+          {
+            "id": "pos_u1_2",
+            "exerciseId": "ex_bb_row",
+            "allowedExerciseIds": ["ex_bb_row", "ex_db_row"],
+            "instructions": "Pull to the hip",
+            "restSeconds": 180,
+            "targetRpe": "8",
+            "plannedSets": [
+              { "id": "ps_u1_2_1", "repsTarget": "6-8", "targetRpe": "8" },
+              { "id": "ps_u1_2_2", "repsTarget": "6-8", "targetRpe": "8" },
+              { "id": "ps_u1_2_3", "repsTarget": "6-8", "targetRpe": "8" }
+            ]
+          },
+          {
+            "id": "pos_u1_3",
+            "exerciseId": "ex_ohp_standing",
+            "allowedExerciseIds": ["ex_ohp_standing", "ex_ohp_seated"],
+            "instructions": "Keep core braced",
+            "restSeconds": 120,
+            "targetRpe": "8",
+            "plannedSets": [
+              { "id": "ps_u1_3_1", "repsTarget": "6-8", "targetRpe": "8" },
+              { "id": "ps_u1_3_2", "repsTarget": "6-8", "targetRpe": "8" },
+              { "id": "ps_u1_3_3", "repsTarget": "6-8", "targetRpe": "8" }
+            ]
+          },
+          {
+            "id": "pos_u1_4",
+            "exerciseId": "ex_pullup",
+            "allowedExerciseIds": ["ex_pullup", "ex_band_lat_pulldown"],
+            "instructions": "Use assistance band if needed",
+            "restSeconds": 120,
+            "targetRpe": "8-9",
+            "plannedSets": [
+              { "id": "ps_u1_4_1", "repsTarget": "8-10", "targetRpe": "8-9" },
+              { "id": "ps_u1_4_2", "repsTarget": "8-10", "targetRpe": "8-9" },
+              { "id": "ps_u1_4_3", "repsTarget": "8-10", "targetRpe": "8-9" }
+            ]
+          },
+          {
+            "id": "pos_u1_5",
+            "exerciseId": "ex_db_lateral_raise",
+            "allowedExerciseIds": ["ex_db_lateral_raise"],
+            "instructions": "Control the eccentric (lowering) phase",
+            "restSeconds": 90,
+            "targetRpe": "9",
+            "plannedSets": [
+              { "id": "ps_u1_5_1", "repsTarget": "10-12", "targetRpe": "9" },
+              { "id": "ps_u1_5_2", "repsTarget": "10-12", "targetRpe": "9" },
+              { "id": "ps_u1_5_3", "repsTarget": "10-12", "targetRpe": "9" }
+            ]
+          },
+          {
+            "id": "pos_u1_6",
+            "exerciseId": "ex_band_tricep_pushdown",
+            "allowedExerciseIds": ["ex_band_tricep_pushdown"],
+            "instructions": "Squeeze at the bottom",
+            "restSeconds": 90,
+            "targetRpe": "9",
+            "plannedSets": [
+              { "id": "ps_u1_6_1", "repsTarget": "10-12", "targetRpe": "9" },
+              { "id": "ps_u1_6_2", "repsTarget": "10-12", "targetRpe": "9" },
+              { "id": "ps_u1_6_3", "repsTarget": "10-12", "targetRpe": "9" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "wk_lower_1",
+        "name": "Lower Body 1 (Strength Focus)",
+        "weekdayLabel": "Tuesday",
+        "positions": [
+          {
+            "id": "pos_l1_1",
+            "exerciseId": "ex_bb_back_squat",
+            "allowedExerciseIds": ["ex_bb_back_squat"],
+            "instructions": "Break parallel if mobility allows. Warm up before working sets.",
+            "restSeconds": 180,
+            "targetRpe": "8",
+            "plannedSets": [
+              { "id": "ps_l1_1_1", "repsTarget": "4-6", "targetRpe": "8" },
+              { "id": "ps_l1_1_2", "repsTarget": "4-6", "targetRpe": "8" },
+              { "id": "ps_l1_1_3", "repsTarget": "4-6", "targetRpe": "8" }
+            ]
+          },
+          {
+            "id": "pos_l1_2",
+            "exerciseId": "ex_bb_rdl",
+            "allowedExerciseIds": ["ex_bb_rdl"],
+            "instructions": "Hinge at the hips, slight knee bend",
+            "restSeconds": 120,
+            "targetRpe": "8",
+            "plannedSets": [
+              { "id": "ps_l1_2_1", "repsTarget": "6-8", "targetRpe": "8" },
+              { "id": "ps_l1_2_2", "repsTarget": "6-8", "targetRpe": "8" },
+              { "id": "ps_l1_2_3", "repsTarget": "6-8", "targetRpe": "8" }
+            ]
+          },
+          {
+            "id": "pos_l1_3",
+            "exerciseId": "ex_bulgarian_split_squat",
+            "allowedExerciseIds": ["ex_bulgarian_split_squat"],
+            "instructions": "Keep front foot flat. Reps per leg.",
+            "restSeconds": 90,
+            "targetRpe": "8-9",
+            "plannedSets": [
+              { "id": "ps_l1_3_1", "repsTarget": "8-10", "targetRpe": "8-9" },
+              { "id": "ps_l1_3_2", "repsTarget": "8-10", "targetRpe": "8-9" },
+              { "id": "ps_l1_3_3", "repsTarget": "8-10", "targetRpe": "8-9" }
+            ]
+          },
+          {
+            "id": "pos_l1_4",
+            "exerciseId": "ex_band_leg_curl",
+            "allowedExerciseIds": ["ex_band_leg_curl"],
+            "instructions": "Anchor band to a sturdy low point",
+            "restSeconds": 90,
+            "targetRpe": "9",
+            "plannedSets": [
+              { "id": "ps_l1_4_1", "repsTarget": "10-12", "targetRpe": "9" },
+              { "id": "ps_l1_4_2", "repsTarget": "10-12", "targetRpe": "9" },
+              { "id": "ps_l1_4_3", "repsTarget": "10-12", "targetRpe": "9" }
+            ]
+          },
+          {
+            "id": "pos_l1_5",
+            "exerciseId": "ex_standing_calf_raise",
+            "allowedExerciseIds": ["ex_standing_calf_raise"],
+            "instructions": "Pause for 1 sec at the bottom stretch",
+            "restSeconds": 60,
+            "targetRpe": "9",
+            "plannedSets": [
+              { "id": "ps_l1_5_1", "repsTarget": "10-12", "targetRpe": "9" },
+              { "id": "ps_l1_5_2", "repsTarget": "10-12", "targetRpe": "9" },
+              { "id": "ps_l1_5_3", "repsTarget": "10-12", "targetRpe": "9" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "wk_upper_2",
+        "name": "Upper Body 2 (Hypertrophy Focus)",
+        "weekdayLabel": "Thursday",
+        "positions": [
+          {
+            "id": "pos_u2_1",
+            "exerciseId": "ex_incline_db_press",
+            "allowedExerciseIds": ["ex_incline_db_press"],
+            "instructions": "Set bench to 30\u201345 degrees",
+            "restSeconds": 120,
+            "targetRpe": "8-9",
+            "plannedSets": [
+              { "id": "ps_u2_1_1", "repsTarget": "8-10", "targetRpe": "8-9" },
+              { "id": "ps_u2_1_2", "repsTarget": "8-10", "targetRpe": "8-9" },
+              { "id": "ps_u2_1_3", "repsTarget": "8-10", "targetRpe": "8-9" }
+            ]
+          },
+          {
+            "id": "pos_u2_2",
+            "exerciseId": "ex_band_seated_row",
+            "allowedExerciseIds": ["ex_band_seated_row"],
+            "instructions": "Squeeze shoulder blades together",
+            "restSeconds": 90,
+            "targetRpe": "9",
+            "plannedSets": [
+              { "id": "ps_u2_2_1", "repsTarget": "10-12", "targetRpe": "9" },
+              { "id": "ps_u2_2_2", "repsTarget": "10-12", "targetRpe": "9" },
+              { "id": "ps_u2_2_3", "repsTarget": "10-12", "targetRpe": "9" }
+            ]
+          },
+          {
+            "id": "pos_u2_3",
+            "exerciseId": "ex_pushup",
+            "allowedExerciseIds": ["ex_pushup"],
+            "instructions": "AMRAP (As Many Reps As Possible) on last set",
+            "restSeconds": 90,
+            "targetRpe": "9",
+            "plannedSets": [
+              { "id": "ps_u2_3_1", "repsTarget": "10-15", "targetRpe": "9" },
+              { "id": "ps_u2_3_2", "repsTarget": "10-15", "targetRpe": "9" },
+              { "id": "ps_u2_3_3", "repsTarget": "10-15", "targetRpe": "9" }
+            ]
+          },
+          {
+            "id": "pos_u2_4",
+            "exerciseId": "ex_band_face_pull",
+            "allowedExerciseIds": ["ex_band_face_pull"],
+            "instructions": "Pull toward the bridge of the nose",
+            "restSeconds": 60,
+            "targetRpe": "9",
+            "plannedSets": [
+              { "id": "ps_u2_4_1", "repsTarget": "12-15", "targetRpe": "9" },
+              { "id": "ps_u2_4_2", "repsTarget": "12-15", "targetRpe": "9" },
+              { "id": "ps_u2_4_3", "repsTarget": "12-15", "targetRpe": "9" }
+            ]
+          },
+          {
+            "id": "pos_u2_5",
+            "exerciseId": "ex_db_bicep_curl",
+            "allowedExerciseIds": ["ex_db_bicep_curl"],
+            "instructions": "Keep elbows pinned to your sides",
+            "restSeconds": 60,
+            "targetRpe": "9-10",
+            "plannedSets": [
+              { "id": "ps_u2_5_1", "repsTarget": "10-12", "targetRpe": "9-10" },
+              { "id": "ps_u2_5_2", "repsTarget": "10-12", "targetRpe": "9-10" },
+              { "id": "ps_u2_5_3", "repsTarget": "10-12", "targetRpe": "9-10" }
+            ]
+          },
+          {
+            "id": "pos_u2_6",
+            "exerciseId": "ex_db_overhead_tricep_ext",
+            "allowedExerciseIds": ["ex_db_overhead_tricep_ext", "ex_band_overhead_tricep_ext"],
+            "instructions": "Full stretch at the bottom",
+            "restSeconds": 60,
+            "targetRpe": "9-10",
+            "plannedSets": [
+              { "id": "ps_u2_6_1", "repsTarget": "10-12", "targetRpe": "9-10" },
+              { "id": "ps_u2_6_2", "repsTarget": "10-12", "targetRpe": "9-10" },
+              { "id": "ps_u2_6_3", "repsTarget": "10-12", "targetRpe": "9-10" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "wk_lower_2",
+        "name": "Lower Body 2 (Hypertrophy Focus)",
+        "weekdayLabel": "Friday",
+        "positions": [
+          {
+            "id": "pos_l2_1",
+            "exerciseId": "ex_deadlift_conventional",
+            "allowedExerciseIds": ["ex_deadlift_conventional", "ex_deadlift_sumo"],
+            "instructions": "Warm up thoroughly. Set 1 heavy, Sets 2-3 lighter volume.",
+            "restSeconds": 180,
+            "targetRpe": "8-9",
+            "plannedSets": [
+              { "id": "ps_l2_1_1", "repsTarget": "5", "targetRpe": "8-9" },
+              { "id": "ps_l2_1_2", "repsTarget": "8", "targetRpe": "8-9" },
+              { "id": "ps_l2_1_3", "repsTarget": "8", "targetRpe": "8-9" }
+            ]
+          },
+          {
+            "id": "pos_l2_2",
+            "exerciseId": "ex_front_squat",
+            "allowedExerciseIds": ["ex_front_squat", "ex_goblet_squat"],
+            "instructions": "Keep torso upright",
+            "restSeconds": 120,
+            "targetRpe": "8-9",
+            "plannedSets": [
+              { "id": "ps_l2_2_1", "repsTarget": "8-10", "targetRpe": "8-9" },
+              { "id": "ps_l2_2_2", "repsTarget": "8-10", "targetRpe": "8-9" },
+              { "id": "ps_l2_2_3", "repsTarget": "8-10", "targetRpe": "8-9" }
+            ]
+          },
+          {
+            "id": "pos_l2_3",
+            "exerciseId": "ex_walking_lunges",
+            "allowedExerciseIds": ["ex_walking_lunges"],
+            "instructions": "Take long strides for glute focus. Reps per leg.",
+            "restSeconds": 90,
+            "targetRpe": "9",
+            "plannedSets": [
+              { "id": "ps_l2_3_1", "repsTarget": "10-12", "targetRpe": "9" },
+              { "id": "ps_l2_3_2", "repsTarget": "10-12", "targetRpe": "9" },
+              { "id": "ps_l2_3_3", "repsTarget": "10-12", "targetRpe": "9" }
+            ]
+          },
+          {
+            "id": "pos_l2_4",
+            "exerciseId": "ex_band_leg_ext",
+            "allowedExerciseIds": ["ex_band_leg_ext"],
+            "instructions": "Squeeze quads at the top",
+            "restSeconds": 60,
+            "targetRpe": "9-10",
+            "plannedSets": [
+              { "id": "ps_l2_4_1", "repsTarget": "12-15", "targetRpe": "9-10" },
+              { "id": "ps_l2_4_2", "repsTarget": "12-15", "targetRpe": "9-10" },
+              { "id": "ps_l2_4_3", "repsTarget": "12-15", "targetRpe": "9-10" }
+            ]
+          },
+          {
+            "id": "pos_l2_5",
+            "exerciseId": "ex_seated_calf_raise",
+            "allowedExerciseIds": ["ex_seated_calf_raise"],
+            "instructions": "Focus on the contraction",
+            "restSeconds": 60,
+            "targetRpe": "9-10",
+            "plannedSets": [
+              { "id": "ps_l2_5_1", "repsTarget": "12-15", "targetRpe": "9-10" },
+              { "id": "ps_l2_5_2", "repsTarget": "12-15", "targetRpe": "9-10" },
+              { "id": "ps_l2_5_3", "repsTarget": "12-15", "targetRpe": "9-10" }
+            ]
+          }
+        ]
+      }
+    ]
+  };
+
+  // src/app/publication.js
+  function canonical(value) {
+    if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+    if (value && typeof value === "object") return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(",")}}`;
+    return JSON.stringify(value);
+  }
+  function fingerprint(value) {
+    const text = canonical(value);
+    return typeof Utilities !== "undefined" ? Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, text).map((byte) => (byte & 255).toString(16).padStart(2, "0")).join("") : text;
+  }
+  function validateDestination(storage, payload) {
+    if (!payload.publicationId || typeof payload.publicationId !== "string") throw new Error("A publication ID is required.");
+    if (!payload.sourceUrl || payload.sourceUrl !== storage.getSpreadsheetUrl()) {
+      throw new Error("This upload belongs to a different spreadsheet. Reconnect its original spreadsheet to upload it.");
+    }
+  }
+  function publishCompletedSession(storage, payload) {
+    validateDestination(storage, payload);
+    const { session, setLogs, publicationId } = payload;
+    if (!session?.id || session.status !== "completed" || !Array.isArray(session.plan?.positions) || !Array.isArray(setLogs) || !Number.isFinite(Date.parse(session.startedAt)) || !Number.isFinite(Date.parse(session.finishedAt))) throw new Error("Invalid completed session.");
+    const positions = new Map(session.plan.positions.map((position) => [position.id, position]));
+    const setIds = /* @__PURE__ */ new Set();
+    for (const set of setLogs) {
+      const position = positions.get(set.positionId);
+      const allowed = position?.allowedExerciseIds || [position?.exerciseId];
+      if (!set.id || setIds.has(set.id) || set.sessionId !== session.id || !position || !allowed.includes(set.exerciseId) || !Number.isFinite(Date.parse(set.recordedTime)) || set.voidedAt || !Number.isInteger(set.setIndex) || set.setIndex < 1) throw new Error("Invalid set in completed session.");
+      setIds.add(set.id);
+    }
+    const signature = fingerprint({ session, setLogs });
+    return storage.runExclusive(() => {
+      const existing = storage.getSession(session.id);
+      const receipt = existing?.progress?._publication;
+      if (receipt && (receipt.id !== publicationId || receipt.fingerprint !== signature)) throw new Error("This session already has a different publication. The local copy has been kept.");
+      if (existing?.status === "completed") {
+        if (!receipt) throw new Error("A completed session with this ID already exists.");
+        return { publicationId, sessionId: session.id };
+      }
+      for (const set of setLogs) {
+        const current = storage.getSetLog(set.id);
+        if (current && current.sessionId !== session.id) throw new Error("A set ID belongs to another session.");
+      }
+      const staged = { ...session, status: "uploading", progress: {
+        ...session.progress,
+        _publication: { id: publicationId, fingerprint: signature }
+      } };
+      storage.saveSession(staged);
+      for (const old of storage.getSetLogs(session.id)) {
+        if (!setIds.has(old.id)) storage.saveSetLog({ ...old, voidedAt: session.finishedAt });
+      }
+      for (const set of setLogs) storage.saveSetLog(set);
+      storage.saveSession({ ...staged, status: "completed" });
+      return { publicationId, sessionId: session.id };
+    });
+  }
+  function publishLibraryRecord(storage, payload) {
+    validateDestination(storage, payload);
+    const { kind, record, baseRevision, publicationId } = payload;
+    if (!["workouts", "exercises"].includes(kind) || !record?.id || !record.name?.trim() || !Number.isInteger(baseRevision) || baseRevision < 0) throw new Error("Invalid workout library publication.");
+    if (kind === "workouts" && !Array.isArray(record.positions)) throw new Error("Workout positions are required.");
+    const signature = fingerprint(record);
+    return storage.runExclusive(() => {
+      const existing = kind === "workouts" ? storage.getWorkout(record.id) : storage.getExercise(record.id);
+      if (existing?._publicationId === publicationId) {
+        if (existing._publicationFingerprint !== signature) throw new Error("This publication was already used for different changes.");
+        return { publicationId, record: existing };
+      }
+      if ((existing?.revision || 0) !== baseRevision) throw new Error("This workout or exercise changed in Sheets. Your local edits are kept; resolve the difference before publishing.");
+      const value = { ...record, _publicationId: publicationId, _publicationFingerprint: signature };
+      const saved = kind === "workouts" ? storage.saveWorkout(value) : storage.saveExercise(value);
+      return { publicationId, record: saved };
+    });
+  }
+
+  // src/app/workout-app.js
+  var VALID_RECORDING_KINDS = [
+    "reps_weight",
+    "bodyweight_reps",
+    "weighted_bodyweight",
+    "band_reps",
+    "timed_duration",
+    "duration_distance"
+  ];
+  var VALID_EQUIPMENT_CONVENTIONS = [
+    "barbell",
+    "dumbbell",
+    "cable",
+    "machine",
+    "bodyweight",
+    "band",
+    "other"
+  ];
+  var WorkoutApp = class {
+    constructor(storage, { idGenerator = null, clock = null } = {}) {
+      this.storage = storage;
+      this.idGenerator = idGenerator || (() => "id_" + Math.random().toString(36).substring(2, 10));
+      this.now = clock || (() => (/* @__PURE__ */ new Date()).toISOString());
+    }
+    init() {
+      this.storage.initSchema();
+      this.checkAndSeed();
+    }
+    checkAndSeed() {
+      const settings = this.storage.getSettings();
+      if (!settings.seedVersion || Number(settings.seedVersion) < 1) {
+        for (const ex of initialWorkoutsData.exercises) {
+          const existing = this.storage.getExercise(ex.id);
+          if (!existing) {
+            this.storage.saveExercise({
+              ...ex,
+              archivedAt: null
+            });
+          }
+        }
+        for (const wk of initialWorkoutsData.workouts) {
+          const existing = this.storage.getWorkout(wk.id);
+          if (!existing) {
+            this.storage.saveWorkout({
+              ...wk,
+              archivedAt: null
+            });
+          }
+        }
+        this.storage.saveSettings({ ...settings, seedVersion: "1" });
+      }
+    }
+    bootstrap() {
+      this.init();
+      const settings = this.storage.getSettings();
+      const exercises = this.storage.getExercises({ includeArchived: true });
+      const workouts = this.storage.getWorkouts({ includeArchived: true });
+      const activeSession = this.storage.getActiveSession();
+      let sessionDetails = null;
+      if (activeSession) {
+        const setLogs = this.storage.getSetLogs(activeSession.id);
+        const benchmarks = {};
+        const exerciseIds = /* @__PURE__ */ new Set();
+        for (const pos of activeSession.plan?.positions || []) {
+          for (const exId of pos.allowedExerciseIds || [pos.exerciseId]) {
+            exerciseIds.add(exId);
+          }
+        }
+        for (const exId of exerciseIds) {
+          benchmarks[exId] = this.storage.getLatestSetsForExercise(exId);
+        }
+        sessionDetails = {
+          session: activeSession,
+          setLogs,
+          benchmarks
+        };
+      }
+      const spreadsheetUrl = typeof this.storage.getSpreadsheetUrl === "function" ? this.storage.getSpreadsheetUrl() : null;
+      return {
+        settings,
+        exercises,
+        workouts,
+        activeSession: sessionDetails,
+        spreadsheetUrl
+      };
+    }
+    // --- Exercises ---
+    downloadData() {
+      this.init();
+      const data = this.storage.exportAll();
+      data.sessions = data.sessions.filter((session) => session.status !== "uploading");
+      const visible = new Set(data.sessions.map((session) => session.id));
+      data.setLogs = data.setLogs.filter((set) => visible.has(set.sessionId));
+      return { data, sourceUrl: this.storage.getSpreadsheetUrl() };
+    }
+    publishCompletedSession(payload) {
+      this.storage.initSchema();
+      return publishCompletedSession(this.storage, payload);
+    }
+    publishLibraryRecord(payload) {
+      this.storage.initSchema();
+      return publishLibraryRecord(this.storage, payload);
+    }
+    listExercises({ includeArchived = false } = {}) {
+      return this.storage.getExercises({ includeArchived });
+    }
+    getExercise(id) {
+      return this.storage.getExercise(id);
+    }
+    createExercise({ name, recordingKind, equipmentConvention, isPerLeg = false, instructions = "" }) {
+      if (!name || !name.trim()) throw new Error("Exercise name is required");
+      const kind = recordingKind || "reps_weight";
+      if (!VALID_RECORDING_KINDS.includes(kind)) {
+        throw new Error(`Invalid recordingKind: ${kind}. Must be one of: ${VALID_RECORDING_KINDS.join(", ")}`);
+      }
+      const equip = equipmentConvention || "barbell";
+      if (!VALID_EQUIPMENT_CONVENTIONS.includes(equip)) {
+        throw new Error(`Invalid equipmentConvention: ${equip}. Must be one of: ${VALID_EQUIPMENT_CONVENTIONS.join(", ")}`);
+      }
+      const id = "ex_" + this.idGenerator();
+      const exercise = {
+        id,
+        name: name.trim(),
+        recordingKind: kind,
+        equipmentConvention: equip,
+        isPerLeg: Boolean(isPerLeg),
+        instructions: instructions || "",
+        archivedAt: null
+      };
+      return this.storage.saveExercise(exercise);
+    }
+    updateExercise(id, data) {
+      const existing = this.storage.getExercise(id);
+      if (!existing) throw new Error(`Exercise not found: ${id}`);
+      if (data.recordingKind && data.recordingKind !== existing.recordingKind) {
+        if (!VALID_RECORDING_KINDS.includes(data.recordingKind)) {
+          throw new Error(`Invalid recordingKind: ${data.recordingKind}`);
+        }
+        const existingSets = this.storage.getAllSetLogsForExercise(id, { limit: 1 });
+        if (existingSets && existingSets.length > 0) {
+          throw new Error("Cannot change recording convention for an exercise with existing history. Create a new exercise variation instead.");
+        }
+      }
+      if (data.equipmentConvention && data.equipmentConvention !== existing.equipmentConvention) {
+        if (!VALID_EQUIPMENT_CONVENTIONS.includes(data.equipmentConvention)) {
+          throw new Error(`Invalid equipmentConvention: ${data.equipmentConvention}`);
+        }
+      }
+      const updated = {
+        ...existing,
+        ...data,
+        id
+      };
+      return this.storage.saveExercise(updated);
+    }
+    archiveExercise(id) {
+      const existing = this.storage.getExercise(id);
+      if (!existing) throw new Error(`Exercise not found: ${id}`);
+      existing.archivedAt = this.now();
+      return this.storage.saveExercise(existing);
+    }
+    restoreExercise(id) {
+      const existing = this.storage.getExercise(id);
+      if (!existing) throw new Error(`Exercise not found: ${id}`);
+      existing.archivedAt = null;
+      return this.storage.saveExercise(existing);
+    }
+    // --- Workouts ---
+    listWorkouts({ includeArchived = false } = {}) {
+      return this.storage.getWorkouts({ includeArchived });
+    }
+    getWorkout(id) {
+      return this.storage.getWorkout(id);
+    }
+    createWorkout({ name, weekdayLabel = "", positions = [] }) {
+      if (!name || !name.trim()) throw new Error("Workout name is required");
+      const id = "wk_" + this.idGenerator();
+      const formattedPositions = (positions || []).map((pos, pIdx) => ({
+        id: pos.id || `pos_${this.idGenerator()}`,
+        positionIndex: pIdx,
+        exerciseId: pos.exerciseId || pos.allowedExerciseIds?.[0] || "",
+        allowedExerciseIds: pos.allowedExerciseIds || (pos.exerciseId ? [pos.exerciseId] : []),
+        targetRpe: pos.targetRpe || null,
+        restSeconds: pos.restSeconds || 120,
+        instructions: pos.instructions || "",
+        plannedSets: pos.plannedSets && pos.plannedSets.length > 0 ? pos.plannedSets.map((ps, sIdx) => ({
+          id: ps.id || `ps_${this.idGenerator()}`,
+          setIndex: sIdx + 1,
+          repsTarget: ps.repsTarget || "8-10",
+          weightTarget: ps.weightTarget || null,
+          rpeTarget: ps.rpeTarget || null
+        })) : [
+          { id: `ps_${this.idGenerator()}`, setIndex: 1, repsTarget: "8-10" },
+          { id: `ps_${this.idGenerator()}`, setIndex: 2, repsTarget: "8-10" },
+          { id: `ps_${this.idGenerator()}`, setIndex: 3, repsTarget: "8-10" }
+        ]
+      }));
+      const workout = {
+        id,
+        name: name.trim(),
+        weekdayLabel: weekdayLabel || "",
+        positions: formattedPositions,
+        archivedAt: null
+      };
+      return this.storage.saveWorkout(workout);
+    }
+    updateWorkout(id, data, expectedRevision = null) {
+      const existing = this.storage.getWorkout(id);
+      if (!existing) throw new Error(`Workout not found: ${id}`);
+      if (expectedRevision != null && existing.revision !== Number(expectedRevision)) {
+        throw new Error(`Conflict: workout has been modified by another request. Current revision is ${existing.revision}.`);
+      }
+      let positions = data.positions !== void 0 ? data.positions : existing.positions;
+      if (positions) {
+        positions = positions.map((pos, pIdx) => ({
+          id: pos.id || `pos_${this.idGenerator()}`,
+          positionIndex: pIdx,
+          exerciseId: pos.exerciseId || pos.allowedExerciseIds?.[0] || "",
+          allowedExerciseIds: pos.allowedExerciseIds || (pos.exerciseId ? [pos.exerciseId] : []),
+          targetRpe: pos.targetRpe || null,
+          restSeconds: pos.restSeconds || 120,
+          instructions: pos.instructions || "",
+          plannedSets: pos.plannedSets && pos.plannedSets.length > 0 ? pos.plannedSets.map((ps, sIdx) => ({
+            id: ps.id || `ps_${this.idGenerator()}`,
+            setIndex: sIdx + 1,
+            repsTarget: ps.repsTarget || "8-10",
+            weightTarget: ps.weightTarget || null,
+            rpeTarget: ps.rpeTarget || null
+          })) : [
+            { id: `ps_${this.idGenerator()}`, setIndex: 1, repsTarget: "8-10" }
+          ]
+        }));
+      }
+      const updated = {
+        ...existing,
+        ...data,
+        positions,
+        id
+      };
+      return this.storage.saveWorkout(updated);
+    }
+    restoreWorkout(id) {
+      const existing = this.storage.getWorkout(id);
+      if (!existing) throw new Error(`Workout not found: ${id}`);
+      existing.archivedAt = null;
+      return this.storage.saveWorkout(existing);
+    }
+    duplicateWorkout(id, newName) {
+      const source = this.storage.getWorkout(id);
+      if (!source) throw new Error(`Source workout not found: ${id}`);
+      const newId = "wk_" + this.idGenerator();
+      const clonedPositions = (source.positions || []).map((pos) => ({
+        ...pos,
+        id: "pos_" + this.idGenerator(),
+        plannedSets: (pos.plannedSets || []).map((ps) => ({
+          ...ps,
+          id: "ps_" + this.idGenerator()
+        }))
+      }));
+      const duplicated = {
+        id: newId,
+        name: newName || `${source.name} (Copy)`,
+        weekdayLabel: source.weekdayLabel || "",
+        positions: clonedPositions,
+        archivedAt: null
+      };
+      return this.storage.saveWorkout(duplicated);
+    }
+    archiveWorkout(id) {
+      const existing = this.storage.getWorkout(id);
+      if (!existing) throw new Error(`Workout not found: ${id}`);
+      existing.archivedAt = this.now();
+      return this.storage.saveWorkout(existing);
+    }
+    // --- Active Session ---
+    startSession(workoutId) {
+      const active = this.storage.getActiveSession();
+      if (active) {
+        throw new Error(`An active session is already in progress: ${active.workoutName}`);
+      }
+      const workout = this.storage.getWorkout(workoutId);
+      if (!workout) throw new Error(`Workout not found: ${workoutId}`);
+      const allExercises = this.storage.getExercises({ includeArchived: true });
+      const exMap = new Map(allExercises.map((e) => [e.id, e]));
+      const snapshotPositions = (workout.positions || []).map((p) => {
+        const allowedExercises = (p.allowedExerciseIds || [p.exerciseId]).map((id) => exMap.get(id)).filter(Boolean);
+        return {
+          ...p,
+          allowedExercises
+        };
+      });
+      const sessionId = "ses_" + this.now().slice(0, 10).replace(/-/g, "") + "_" + this.idGenerator();
+      const session = {
+        id: sessionId,
+        workoutId: workout.id,
+        workoutName: workout.name,
+        status: "in_progress",
+        startedAt: this.now(),
+        finishedAt: null,
+        plan: {
+          workoutId: workout.id,
+          workoutName: workout.name,
+          positions: snapshotPositions
+        },
+        progress: {
+          currentPositionIndex: 0,
+          selectedAlternatives: {},
+          // positionId -> exerciseId
+          skippedPositionIds: [],
+          exerciseNotes: {},
+          // exerciseId -> note
+          sessionNote: ""
+        }
+      };
+      const saved = this.storage.saveSession(session);
+      return this.getSessionDetails(saved.id);
+    }
+    getSessionDetails(sessionId) {
+      const session = this.storage.getSession(sessionId);
+      if (!session) return null;
+      const setLogs = this.storage.getSetLogs(sessionId);
+      const benchmarks = {};
+      for (const pos of session.plan?.positions || []) {
+        for (const exId of pos.allowedExerciseIds || [pos.exerciseId]) {
+          if (!benchmarks[exId]) {
+            benchmarks[exId] = this.storage.getLatestSetsForExercise(exId);
+          }
+        }
+      }
+      return { session, setLogs, benchmarks };
+    }
+    finishSession(sessionId, { sessionNote = "", exerciseNotes = {} } = {}) {
+      const session = this.storage.getSession(sessionId);
+      if (!session) throw new Error(`Session not found: ${sessionId}`);
+      session.status = "completed";
+      session.finishedAt = this.now();
+      session.progress = {
+        ...session.progress,
+        sessionNote: sessionNote || session.progress?.sessionNote || "",
+        exerciseNotes: {
+          ...session.progress?.exerciseNotes || {},
+          ...exerciseNotes
+        }
+      };
+      return this.storage.saveSession(session);
+    }
+    discardSession(sessionId) {
+      const session = this.storage.getSession(sessionId);
+      if (!session) throw new Error(`Session not found: ${sessionId}`);
+      session.status = "abandoned";
+      session.finishedAt = this.now();
+      return this.storage.saveSession(session);
+    }
+    logSet(sessionId, {
+      positionId,
+      plannedSetId = null,
+      exerciseId,
+      setIndex,
+      isWarmup = false,
+      result = {}
+    }) {
+      const session = this.storage.getSession(sessionId);
+      if (!session) throw new Error(`Session not found: ${sessionId}`);
+      if (session.status !== "in_progress") {
+        throw new Error(`Cannot log set to a session that is ${session.status}`);
+      }
+      const setId = "set_" + this.idGenerator();
+      const setLog = {
+        id: setId,
+        sessionId,
+        positionId,
+        plannedSetId: plannedSetId || null,
+        exerciseId,
+        setIndex: Number(setIndex) || 1,
+        isWarmup: Boolean(isWarmup),
+        result: result || {},
+        recordedTime: this.now(),
+        voidedAt: null
+      };
+      return this.storage.saveSetLog(setLog);
+    }
+    switchPositionAlternative(sessionId, positionId, newExerciseId) {
+      const session = this.storage.getSession(sessionId);
+      if (!session) throw new Error(`Session not found: ${sessionId}`);
+      if (session.status !== "in_progress") {
+        throw new Error(`Cannot modify a session that is ${session.status}`);
+      }
+      const setLogs = this.storage.getSetLogs(sessionId);
+      const positionLogs = setLogs.filter((l) => l.positionId === positionId && !l.voidedAt);
+      const conflict = positionLogs.find((l) => l.exerciseId !== newExerciseId);
+      if (conflict) {
+        throw new Error("Cannot switch exercise alternative: sets have already been recorded for this position. Please void/undo existing sets first.");
+      }
+      session.progress = session.progress || {};
+      session.progress.selectedAlternatives = session.progress.selectedAlternatives || {};
+      session.progress.selectedAlternatives[positionId] = newExerciseId;
+      return this.storage.saveSession(session);
+    }
+    updateSessionProgress(sessionId, progressUpdates = {}) {
+      const session = this.storage.getSession(sessionId);
+      if (!session) throw new Error(`Session not found: ${sessionId}`);
+      if (session.status !== "in_progress") {
+        throw new Error(`Cannot modify a session that is ${session.status}`);
+      }
+      if (progressUpdates.selectedAlternatives) {
+        const setLogs = this.storage.getSetLogs(sessionId);
+        for (const [posId, chosenExId] of Object.entries(progressUpdates.selectedAlternatives)) {
+          const existingSets = setLogs.filter((l) => l.positionId === posId && !l.voidedAt);
+          const conflict = existingSets.find((l) => l.exerciseId !== chosenExId);
+          if (conflict) {
+            throw new Error("Cannot switch exercise alternative: sets have already been recorded for this position. Please void/undo existing sets first.");
+          }
+        }
+      }
+      session.progress = {
+        ...session.progress || {},
+        ...progressUpdates,
+        selectedAlternatives: {
+          ...session.progress?.selectedAlternatives || {},
+          ...progressUpdates.selectedAlternatives || {}
+        },
+        exerciseNotes: {
+          ...session.progress?.exerciseNotes || {},
+          ...progressUpdates.exerciseNotes || {}
+        }
+      };
+      return this.storage.saveSession(session);
+    }
+    voidSet(setId) {
+      const target = this.storage.getSetLog(setId);
+      if (target) {
+        target.voidedAt = this.now();
+        return this.storage.saveSetLog(target);
+      }
+      return { success: true };
+    }
+    // --- History & Comparison ---
+    listSessions({ limit = 50, status = null } = {}) {
+      return this.storage.getSessions({ limit, status });
+    }
+    getExerciseHistory(exerciseId, { limit = 50 } = {}) {
+      const setLogs = this.storage.getAllSetLogsForExercise(exerciseId, { limit: limit * 5 });
+      if (!setLogs || setLogs.length === 0) return [];
+      const sessionMap = /* @__PURE__ */ new Map();
+      for (const log of setLogs) {
+        if (!sessionMap.has(log.sessionId)) {
+          sessionMap.set(log.sessionId, []);
+        }
+        sessionMap.get(log.sessionId).push(log);
+      }
+      const historyItems = [];
+      for (const [sessionId, sets] of sessionMap.entries()) {
+        const session = this.storage.getSession(sessionId);
+        if (session && session.status !== "uploading") {
+          historyItems.push({
+            sessionId,
+            sessionDate: session.finishedAt || session.startedAt || session.createdAt,
+            workoutName: session.workoutName,
+            status: session.status,
+            exerciseNote: session.progress?.exerciseNotes?.[exerciseId] || null,
+            sets: sets.sort((a, b) => a.setIndex - b.setIndex)
+          });
+        }
+        if (historyItems.length >= limit) break;
+      }
+      return historyItems.sort((a, b) => {
+        const timeDiff = new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime();
+        if (timeDiff !== 0) return timeDiff;
+        return b.sessionId.localeCompare(a.sessionId);
+      });
+    }
+    // --- Backup & Restore ---
+    exportData() {
+      return this.storage.exportAll();
+    }
+    restoreData(backupData) {
+      return this.storage.importAll(backupData);
+    }
+  };
+
+  // src/server/dispatcher.js
+  var Dispatcher = class {
+    constructor(workoutApp) {
+      this.app = workoutApp;
+      this.processedRequests = /* @__PURE__ */ new Map();
+    }
+    handle(command) {
+      const { action, payload = {}, requestId } = command || {};
+      if (!action) {
+        return { success: false, error: { code: "INVALID_COMMAND", message: "Action is required" } };
+      }
+      if (requestId && this.processedRequests.has(requestId)) {
+        return this.processedRequests.get(requestId);
+      }
+      try {
+        let data = null;
+        switch (action) {
+          case "downloadData":
+            data = this.app.downloadData();
+            break;
+          case "publishCompletedSession":
+            data = this.app.publishCompletedSession(payload);
+            break;
+          case "publishLibraryRecord":
+            data = this.app.publishLibraryRecord(payload);
+            break;
+          case "bootstrap":
+            data = this.app.bootstrap();
+            break;
+          case "listExercises":
+            data = this.app.listExercises(payload);
+            break;
+          case "getExercise":
+            data = this.app.getExercise(payload.id);
+            break;
+          case "createExercise":
+            data = this.app.createExercise(payload);
+            break;
+          case "updateExercise":
+            data = this.app.updateExercise(payload.id, payload.data);
+            break;
+          case "archiveExercise":
+            data = this.app.archiveExercise(payload.id);
+            break;
+          case "restoreExercise":
+            data = this.app.restoreExercise(payload.id);
+            break;
+          case "listWorkouts":
+            data = this.app.listWorkouts(payload);
+            break;
+          case "getWorkout":
+            data = this.app.getWorkout(payload.id);
+            break;
+          case "createWorkout":
+            data = this.app.createWorkout(payload);
+            break;
+          case "updateWorkout":
+            data = this.app.updateWorkout(payload.id, payload.data, payload.expectedRevision);
+            break;
+          case "duplicateWorkout":
+            data = this.app.duplicateWorkout(payload.id, payload.newName);
+            break;
+          case "archiveWorkout":
+            data = this.app.archiveWorkout(payload.id);
+            break;
+          case "restoreWorkout":
+            data = this.app.restoreWorkout(payload.id);
+            break;
+          case "startSession":
+            data = this.app.startSession(payload.workoutId);
+            break;
+          case "getSessionDetails":
+            data = this.app.getSessionDetails(payload.sessionId);
+            break;
+          case "switchPositionAlternative":
+            data = this.app.switchPositionAlternative(payload.sessionId, payload.positionId, payload.newExerciseId);
+            break;
+          case "updateSessionProgress":
+            data = this.app.updateSessionProgress(payload.sessionId, payload.progress);
+            break;
+          case "finishSession":
+            data = this.app.finishSession(payload.sessionId, payload);
+            break;
+          case "discardSession":
+            data = this.app.discardSession(payload.sessionId);
+            break;
+          case "logSet":
+            data = this.app.logSet(payload.sessionId, payload);
+            break;
+          case "voidSet":
+            data = this.app.voidSet(payload.setId);
+            break;
+          case "listSessions":
+            data = this.app.listSessions(payload);
+            break;
+          case "getExerciseHistory":
+            data = this.app.getExerciseHistory(payload.exerciseId, payload);
+            break;
+          case "exportData":
+            data = this.app.exportData();
+            break;
+          case "restoreData":
+            data = this.app.restoreData(payload.data);
+            break;
+          default:
+            return {
+              success: false,
+              error: { code: "UNKNOWN_ACTION", message: `Unknown action: ${action}` }
+            };
+        }
+        const response = { success: true, data };
+        if (requestId) {
+          this.processedRequests.set(requestId, response);
+        }
+        return response;
+      } catch (err) {
+        console.error(`Error in dispatching action '${action}':`, err);
+        return {
+          success: false,
+          error: {
+            code: "EXECUTION_ERROR",
+            message: err.message || "An error occurred during execution"
+          }
+        };
+      }
+    }
+  };
+
+  // src/client/offline-store.js
+  var OfflineStore = class {
+    constructor(indexedDB = globalThis.indexedDB, name = "my-gym-offline-v1") {
+      this.indexedDB = indexedDB;
+      this.name = name;
+    }
+    async open() {
+      if (!this.indexedDB) throw new Error("Device storage is unavailable. Enable browser storage to record workouts.");
+      if (!this.database) {
+        this.database = new Promise((resolve, reject) => {
+          const request = this.indexedDB.open(this.name, 1);
+          request.onupgradeneeded = () => request.result.createObjectStore("connections");
+          request.onerror = () => reject(request.error);
+          request.onblocked = () => reject(new Error("Close other app tabs to update device storage."));
+          request.onsuccess = () => {
+            request.result.onversionchange = () => request.result.close();
+            resolve(request.result);
+          };
+        });
+      }
+      return this.database;
+    }
+    async read(key) {
+      const database = await this.open();
+      return new Promise((resolve, reject) => {
+        const request = database.transaction("connections").objectStore("connections").get(key);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error);
+      });
+    }
+    async update(key, change) {
+      const database = await this.open();
+      return new Promise((resolve, reject) => {
+        const transaction = database.transaction("connections", "readwrite");
+        const store = transaction.objectStore("connections");
+        const request = store.get(key);
+        let result, failure;
+        request.onsuccess = () => {
+          try {
+            const document2 = request.result || {
+              data: null,
+              sourceUrl: null,
+              downloadedAt: null,
+              lastUploadedAt: null,
+              localSessions: {},
+              dirty: {},
+              outbox: [],
+              uploadError: null
+            };
+            result = change(document2);
+            store.put(document2, key);
+          } catch (error) {
+            failure = error;
+            transaction.abort();
+          }
+        };
+        transaction.oncomplete = () => resolve(result);
+        transaction.onabort = () => reject(failure || transaction.error || new Error("Could not save on this device. Keep this screen open and try again."));
+        transaction.onerror = () => {
+        };
+      });
+    }
+  };
+
+  // src/client/offline-workouts.js
+  var READS = /* @__PURE__ */ new Set(["bootstrap", "listExercises", "getExercise", "listWorkouts", "getWorkout", "getSessionDetails", "listSessions", "getExerciseHistory", "exportData"]);
+  var LIBRARY = /* @__PURE__ */ new Map([
+    ["createWorkout", "workouts"],
+    ["updateWorkout", "workouts"],
+    ["duplicateWorkout", "workouts"],
+    ["archiveWorkout", "workouts"],
+    ["restoreWorkout", "workouts"],
+    ["createExercise", "exercises"],
+    ["updateExercise", "exercises"],
+    ["archiveExercise", "exercises"],
+    ["restoreExercise", "exercises"]
+  ]);
+  function domain(document2, idGenerator) {
+    if (!document2?.data) throw new Error("Download your workouts once while connected before training offline.");
+    const storage = new InMemoryStorage();
+    storage.importAll(structuredClone(document2.data));
+    storage.getSpreadsheetUrl = () => document2.sourceUrl;
+    return { storage, dispatcher: new Dispatcher(new WorkoutApp(storage, { idGenerator })) };
+  }
+  function execute(dispatcher, action, payload) {
+    const response = dispatcher.handle({ action, payload });
+    if (!response.success) throw new Error(response.error.message);
+    return response.data;
+  }
+  var OfflineWorkouts = class {
+    constructor({ transport: transport2, store = new OfflineStore(), idGenerator = () => crypto.randomUUID() }) {
+      this.transport = transport2;
+      this.store = store;
+      this.idGenerator = idGenerator;
+      this.key = null;
+      this.listeners = /* @__PURE__ */ new Set();
+      this.uploads = /* @__PURE__ */ new Map();
+      this.status = {};
+    }
+    async select(key) {
+      this.key = key;
+      await this.notify(key);
+      return Boolean(this.status.ready);
+    }
+    subscribe(listener) {
+      this.listeners.add(listener);
+      return () => this.listeners.delete(listener);
+    }
+    async notify(key = this.key) {
+      const document2 = await this.store.read(key);
+      if (key !== this.key) return;
+      this.status = {
+        ready: Boolean(document2?.data),
+        sourceUrl: document2?.sourceUrl,
+        downloadedAt: document2?.downloadedAt,
+        lastUploadedAt: document2?.lastUploadedAt,
+        pendingSessions: document2?.outbox.filter((item) => item.action === "publishCompletedSession").length || 0,
+        pendingLibrary: document2?.outbox.filter((item) => item.action === "publishLibraryRecord").length || 0,
+        libraryChanges: Object.keys(document2?.dirty || {}).length,
+        uploading: this.uploads.has(key),
+        error: document2?.uploadError || null
+      };
+      for (const listener of this.listeners) listener(this.status);
+    }
+    async command(action, payload = {}) {
+      const key = this.key;
+      const run = (document2) => {
+        const { storage, dispatcher } = domain(document2, this.idGenerator);
+        if (action === "bootstrap") {
+          const result3 = execute(dispatcher, action, payload);
+          result3.workouts = result3.workouts.filter((item) => !item.archivedAt);
+          result3.exercises = result3.exercises.filter((item) => !item.archivedAt);
+          const exercises = new Map(result3.exercises.map((item) => [item.id, item]));
+          for (const session of document2.data.sessions) {
+            for (const position of session.plan?.positions || []) {
+              for (const exercise of position.allowedExercises || []) {
+                if (!exercises.has(exercise.id)) exercises.set(exercise.id, exercise);
+              }
+            }
+          }
+          result3.exercises = [...exercises.values()];
+          result3.history = storage.getSessions({ status: "completed", limit: 1e3 }).map((session) => ({
+            ...session,
+            publication: document2.outbox.some((item) => item.payload.session?.id === session.id) ? "pending" : "published",
+            progress: { ...session.progress, totalWorkingSets: storage.getSetLogs(session.id).filter((set) => !set.isWarmup).length }
+          }));
+          return result3;
+        }
+        if (action === "exportData") return { ...storage.exportAll(), offline: structuredClone(document2) };
+        if (READS.has(action)) return execute(dispatcher, action, payload);
+        if (action === "restoreData") {
+          const backup = payload.data?.offline;
+          if (backup) {
+            if (!backup.data || !Array.isArray(backup.outbox) || !backup.localSessions || !backup.dirty) {
+              throw new Error("Use a backup exported by the offline app. Older backups can be restored to Sheets before downloading them here.");
+            }
+            if (backup.sourceUrl !== document2.sourceUrl) throw new Error("This backup belongs to a different spreadsheet. Select its original connection first.");
+            if (this.uploads.has(key)) throw new Error("Wait for the current upload before restoring a backup.");
+            Object.assign(document2, structuredClone(backup));
+            return { success: true };
+          }
+          const legacyData = payload.data;
+          if (legacyData && Array.isArray(legacyData.exercises) && Array.isArray(legacyData.workouts)) {
+            if (document2.outbox && document2.outbox.length > 0 || Object.keys(document2.dirty || {}).length > 0 || Object.keys(document2.localSessions || {}).length > 0) {
+              throw new Error("Cannot restore an older backup format while you have unsaved local training or pending uploads. Finish and upload your work first.");
+            }
+            if (this.uploads.has(key)) throw new Error("Wait for the current upload before restoring a backup.");
+            document2.data = {
+              version: legacyData.version || 1,
+              settings: structuredClone(legacyData.settings || {}),
+              exercises: structuredClone(legacyData.exercises),
+              workouts: structuredClone(legacyData.workouts),
+              sessions: structuredClone(legacyData.sessions || []),
+              setLogs: structuredClone(legacyData.setLogs || [])
+            };
+            document2.dirty = {};
+            document2.outbox = [];
+            document2.localSessions = {};
+            return { success: true };
+          }
+          throw new Error("Use a backup exported by the offline app. Older backups can be restored to Sheets before downloading them here.");
+        }
+        const sessionId = payload.sessionId || (action === "voidSet" ? storage.getSetLog(payload.setId)?.sessionId : null);
+        if (sessionId && storage.getSession(sessionId)?.status !== "in_progress") {
+          if (action === "finishSession" && storage.getSession(sessionId)?.status === "completed" && document2.localSessions[sessionId]) return storage.getSession(sessionId);
+          throw new Error("Completed sessions cannot be edited by an active-workout action.");
+        }
+        const kind = LIBRARY.get(action);
+        const base = kind && payload.id ? document2.data[kind].find((item) => item.id === payload.id) : null;
+        const result2 = execute(dispatcher, action, payload);
+        if (action === "startSession") document2.localSessions[result2.session.id] = true;
+        if (sessionId) document2.localSessions[sessionId] = true;
+        if (kind) {
+          const dirtyKey = `${kind}:${result2.id}`;
+          const previous = document2.dirty[dirtyKey];
+          document2.dirty[dirtyKey] = {
+            kind,
+            id: result2.id,
+            baseRevision: previous ? previous.baseRevision : base?.revision || 0,
+            editId: this.idGenerator()
+          };
+        }
+        if (action === "logSet" && payload.restSeconds) {
+          const session = storage.getSession(sessionId);
+          storage.saveSession({ ...session, progress: { ...session.progress, restEndsAt: Date.now() + payload.restSeconds * 1e3 } });
+        }
+        document2.data = storage.exportAll();
+        if (action === "finishSession") {
+          const publicationId = this.idGenerator();
+          document2.outbox.push({ id: publicationId, action: "publishCompletedSession", payload: {
+            publicationId,
+            sourceUrl: document2.sourceUrl,
+            session: structuredClone(result2),
+            setLogs: document2.data.setLogs.filter((set) => set.sessionId === sessionId && !set.voidedAt)
+          } });
+        }
+        return result2;
+      };
+      const result = READS.has(action) ? run(await this.store.read(key)) : await this.store.update(key, run);
+      await this.notify(key);
+      return result;
+    }
+    async download() {
+      const key = this.key;
+      let remote;
+      try {
+        remote = await this.transport.send("downloadData");
+      } catch (err) {
+        if (err.message && (err.message.includes("Unknown action: downloadData") || err.message.includes("UNKNOWN_ACTION"))) {
+          throw new Error("Your Google Apps Script Web App is running an older deployment that does not support offline sync. Update your Apps Script deployment.");
+        }
+        throw err;
+      }
+      await this.store.update(key, (document2) => {
+        if (!remote.data || !remote.sourceUrl) throw new Error("The server did not provide an offline data snapshot. Update the Apps Script deployment.");
+        if (document2.sourceUrl && document2.sourceUrl !== remote.sourceUrl) {
+          throw new Error("This connection now points to a different spreadsheet. Local workouts were kept with their original spreadsheet. Use a separate connection for the new one.");
+        }
+        const data = structuredClone(remote.data);
+        const local = document2.data;
+        if (local) {
+          for (const kind of ["workouts", "exercises"]) {
+            const keep = new Set(Object.values(document2.dirty).filter((item) => item.kind === kind).map((item) => item.id));
+            data[kind] = [...data[kind].filter((item) => !keep.has(item.id)), ...local[kind].filter((item) => keep.has(item.id))];
+          }
+          const owned = new Set(Object.keys(document2.localSessions));
+          data.sessions = [...data.sessions.filter((item) => !owned.has(item.id)), ...local.sessions.filter((item) => owned.has(item.id))];
+          data.setLogs = [...data.setLogs.filter((item) => !owned.has(item.sessionId)), ...local.setLogs.filter((item) => owned.has(item.sessionId))];
+        }
+        const active = data.sessions.find((item) => item.status === "in_progress" && document2.localSessions[item.id]);
+        const remoteActive = data.sessions.find((item) => item.status === "in_progress" && !document2.localSessions[item.id]);
+        if (!active && remoteActive) document2.localSessions[remoteActive.id] = true;
+        data.sessions = data.sessions.filter((item) => item.status !== "in_progress" || document2.localSessions[item.id]);
+        const ids = new Set(data.sessions.map((item) => item.id));
+        data.setLogs = data.setLogs.filter((item) => ids.has(item.sessionId));
+        document2.data = data;
+        document2.sourceUrl = remote.sourceUrl;
+        document2.downloadedAt = (/* @__PURE__ */ new Date()).toISOString();
+      });
+      await this.notify(key);
+    }
+    async publishLibrary() {
+      const key = this.key;
+      await this.store.update(key, (document2) => {
+        if (!document2.data) throw new Error("Download the workout library first.");
+        for (const [dirtyKey, dirty] of Object.entries(document2.dirty)) {
+          if (document2.outbox.some((item) => item.dirtyKey === dirtyKey)) continue;
+          const publicationId = this.idGenerator();
+          const rawRecord = document2.data[dirty.kind].find((item) => item.id === dirty.id);
+          if (!rawRecord) continue;
+          const record = structuredClone(rawRecord);
+          delete record._publicationId;
+          delete record._publicationFingerprint;
+          document2.outbox.push({
+            id: publicationId,
+            dirtyKey,
+            editId: dirty.editId,
+            action: "publishLibraryRecord",
+            payload: {
+              publicationId,
+              sourceUrl: document2.sourceUrl,
+              kind: dirty.kind,
+              baseRevision: dirty.baseRevision,
+              record
+            }
+          });
+        }
+      });
+      await this.notify(key);
+      return this.upload();
+    }
+    async upload() {
+      const key = this.key;
+      if (this.uploads.has(key)) return this.uploads.get(key);
+      const uploading = Promise.resolve().then(() => this.drain(key));
+      this.uploads.set(key, uploading);
+      try {
+        await Promise.all([uploading, this.notify(key)]);
+      } finally {
+        this.uploads.delete(key);
+        await this.notify(key);
+      }
+    }
+    async drain(key) {
+      const config = this.transport.getRemoteConfig();
+      const document2 = await this.store.read(key);
+      for (const item of document2?.outbox || []) {
+        if (key !== this.key || this.transport.getRemoteConfig().gasUrl !== config.gasUrl) break;
+        try {
+          const result = await this.transport.send(item.action, item.payload);
+          if (result.publicationId !== item.id) throw new Error("The server did not confirm this upload.");
+          await this.store.update(key, (current) => {
+            current.outbox = current.outbox.filter((queued) => queued.id !== item.id);
+            current.lastUploadedAt = (/* @__PURE__ */ new Date()).toISOString();
+            current.uploadError = null;
+            if (item.dirtyKey && current.dirty[item.dirtyKey]) {
+              const dirty = current.dirty[item.dirtyKey];
+              if (dirty.editId === item.editId) {
+                delete current.dirty[item.dirtyKey];
+                const records = current.data[item.payload.kind];
+                const index = records.findIndex((record) => record.id === result.record.id);
+                records[index] = result.record;
+              } else {
+                dirty.baseRevision = result.record.revision;
+              }
+            }
+          });
+        } catch (error) {
+          await this.store.update(key, (current) => {
+            current.uploadError = error.message;
+          });
+          break;
+        }
+      }
+    }
+  };
+
+  // src/client/offline-shell.js
+  async function prepareOfflineShell() {
+    if (!("serviceWorker" in navigator) || window.google?.script?.run) return false;
+    try {
+      await navigator.serviceWorker.register("./sw.js", { scope: "./" });
+      await navigator.serviceWorker.ready;
+      return true;
+    } catch (error) {
+      console.warn("Offline app files are not available:", error);
+      return false;
+    }
+  }
+
   // src/client/app.js
+  function escapeHtml3(str) {
+    if (!str) return "";
+    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
   var GymApp = class {
     constructor() {
       this.activeTab = "today";
@@ -2459,6 +4604,15 @@ header.app-header {
       this.activeSession = null;
       this.benchmarks = {};
       this.spreadsheetUrl = null;
+      this.loaded = false;
+      this.loading = false;
+      this.remoteLoading = false;
+      this.connecting = false;
+      this.loadError = null;
+      this.busyActions = /* @__PURE__ */ new Set();
+      this.offline = new OfflineWorkouts({ transport });
+      this.offlineShellReady = false;
+      this.localError = null;
       this.restTimer = {
         active: false,
         remainingSeconds: 0,
@@ -2474,10 +4628,64 @@ header.app-header {
     }
     async init() {
       this.bindGlobalEvents();
-      await this.refresh();
+      this.dataStatus = new DataStatus(this);
+      this.offline.subscribe(() => this.dataStatus.update());
+      prepareOfflineShell().then((ready) => {
+        this.offlineShellReady = ready;
+        this.dataStatus.update();
+      });
+      try {
+        const ready = await this.offline.select(this.connectionKey());
+        if (ready) await this.refresh();
+        else await this.refresh({ remote: true });
+        if (navigator.onLine !== false && ready) this.syncAndRefresh();
+      } catch (error) {
+        this.loadError = error.message;
+        this.localError = error.message;
+        this.render();
+      }
+      window.addEventListener("online", () => this.syncAndRefresh());
+      window.addEventListener("focus", () => this.uploadCompleted());
+      this.retryTimer = setInterval(() => this.uploadCompleted(), 6e4);
     }
     async api(action, payload = {}) {
-      return transport.send(action, payload);
+      try {
+        const result = await this.offline.command(action, payload);
+        this.localError = null;
+        return result;
+      } catch (error) {
+        this.localError = error.message;
+        this.dataStatus?.update();
+        throw error;
+      }
+    }
+    connectionKey() {
+      return transport.isGas ? `embedded:${location.origin}${location.pathname}` : transport.getRemoteConfig().gasUrl || `preview:${location.origin}`;
+    }
+    async uploadCompleted() {
+      if (navigator.onLine === false || !this.offline.status.ready || this.connecting) return;
+      if (!this.offline.status.pendingSessions && !this.offline.status.pendingLibrary) return;
+      try {
+        await this.offline.upload();
+        if (this.activeTab === "progress" && !document.querySelector("#modal-container").children.length) await this.refresh();
+      } catch (error) {
+        this.localError = error.message;
+        this.dataStatus.update();
+      }
+    }
+    async syncAndRefresh() {
+      if (navigator.onLine === false || this.connecting) return;
+      await this.uploadCompleted();
+      await this.refresh({ remote: true, background: true });
+    }
+    async publishWorkoutChanges() {
+      try {
+        await this.offline.publishLibrary();
+        await this.refresh();
+      } catch (error) {
+        this.localError = error.message;
+        this.dataStatus.update();
+      }
     }
     setActiveSessionData(details) {
       if (!details) {
@@ -2500,20 +4708,85 @@ header.app-header {
         Object.assign(this.benchmarks, benchmarks);
       }
     }
-    async refresh() {
+    async refresh({ remote = false, background = false } = {}) {
+      if (remote && this.remoteLoading) return false;
+      if (remote) this.remoteLoading = true;
+      this.loading = true;
+      this.loadError = null;
+      if (!this.loaded) this.render();
+      this.dataStatus?.update();
+      const slowTimer = setTimeout(() => {
+        document.querySelectorAll("[data-loading-hint]").forEach((el) => {
+          el.textContent = "Still working\u2014first-time spreadsheet setup can take longer.";
+        });
+      }, 8e3);
       try {
+        const previousSessionId = this.activeSession?.id;
+        if (remote) await this.offline.download();
         const data = await this.api("bootstrap");
         this.workouts = data.workouts || [];
         this.exercises = data.exercises || [];
         this.history = data.history || [];
-        this.spreadsheetUrl = data.spreadsheetUrl || localStorage.getItem("my_gym_spreadsheet_url") || null;
+        this.spreadsheetUrl = data.spreadsheetUrl || null;
         this.setActiveSessionData(data.activeSession);
+        const sameSession = previousSessionId && previousSessionId === this.activeSession?.id;
+        if (!sameSession) {
+          this.views.session.currentPositionIndex = this.activeSession?.progress?.currentPositionIndex || 0;
+          this.views.session.resetEntryInputs();
+          const restSeconds = Math.ceil(((this.activeSession?.progress?.restEndsAt || 0) - Date.now()) / 1e3);
+          if (restSeconds > 0) this.startRestTimer(restSeconds);
+        }
+        this.loaded = true;
         if (this.activeSession?.plan?.positions) {
           await this.loadBenchmarksForSession();
         }
-        this.render();
+        const inputs = sameSession ? [...document.querySelectorAll("#app-root input")].map((el) => [el.id, el.value]) : [];
+        if (!background || !sameSession || this.activeTab !== "session") this.render();
+        if (this.activeTab === "session") {
+          for (const [id, value] of inputs) {
+            const input = document.getElementById(id);
+            if (input) input.value = value;
+          }
+        }
+        return true;
       } catch (err) {
+        this.loadError = err.message;
         console.error("Initialization error:", err);
+        return false;
+      } finally {
+        clearTimeout(slowTimer);
+        if (remote) this.remoteLoading = false;
+        this.loading = this.remoteLoading;
+        if (!this.loaded) this.render();
+        this.dataStatus?.update();
+      }
+    }
+    // Keep acknowledgment on the control the user pressed, and serialize repeated
+    // activations even when navigation creates another copy of that control.
+    async runAction(key, selector, label, action) {
+      if (this.busyActions.has(key)) return false;
+      this.busyActions.add(key);
+      this.dataStatus?.update();
+      const controls = [...document.querySelectorAll(selector)].map((button) => ({
+        button,
+        html: button.innerHTML,
+        disabled: button.disabled
+      }));
+      for (const { button } of controls) {
+        button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+        button.textContent = label;
+      }
+      try {
+        return await action() !== false;
+      } finally {
+        this.busyActions.delete(key);
+        this.dataStatus?.update();
+        for (const { button, html, disabled } of controls) {
+          button.disabled = disabled;
+          button.removeAttribute("aria-busy");
+          button.innerHTML = html;
+        }
       }
     }
     async loadBenchmarksForSession() {
@@ -2580,8 +4853,32 @@ header.app-header {
     }
     render() {
       this.updateNavState();
+      this.dataStatus?.update();
       const root = document.querySelector("#app-root");
       if (!root) return;
+      root.setAttribute("aria-busy", String(!this.loaded && this.loading));
+      if (!this.loaded) {
+        const configured = this.dataStatus?.configured;
+        root.innerHTML = this.loading && configured ? `
+        <section class="loading-state">
+          <h1 class="page-title">Your workouts</h1>
+          <p role="status">${this.connecting ? "Preparing your spreadsheet and loading workouts\u2026" : "Loading your workouts\u2026"}</p>
+          <p class="metadata-text" data-loading-hint>Getting exercises, workouts, and your active session.</p>
+          <div class="skeleton-card" aria-hidden="true"></div>
+          <div class="skeleton-card skeleton-short" aria-hidden="true"></div>
+          <div class="skeleton-card skeleton-short" aria-hidden="true"></div>
+        </section>` : `
+        <section class="card loading-state">
+          <h1 class="page-title">${configured ? "Couldn\u2019t load your workouts" : "Connect your workouts"}</h1>
+          <p>${configured ? escapeHtml3(this.loadError || "Please try again.") : "Connect Google Sheets to load your workouts and save your training."}</p>
+          <p class="metadata-text">There is no offline workout copy on this device.</p>
+          ${configured ? '<button class="btn btn-primary" id="btn-retry-load">Retry loading</button>' : ""}
+          <button class="btn btn-secondary" id="btn-setup-connection">Connection settings</button>
+        </section>`;
+        root.querySelector("#btn-retry-load")?.addEventListener("click", () => this.refresh({ remote: true }));
+        root.querySelector("#btn-setup-connection")?.addEventListener("click", () => this.openSettingsModal());
+        return;
+      }
       if (this.activeTab === "session") {
         root.innerHTML = this.views.session.render();
         this.views.session.attachEvents(root);
@@ -2597,38 +4894,53 @@ header.app-header {
       }
     }
     async startWorkout(workoutId) {
-      try {
-        const res = await this.api("startSession", { workoutId });
-        this.setActiveSessionData(res);
-        this.views.session.currentPositionIndex = 0;
-        this.views.session.resetEntryInputs();
-        await this.loadBenchmarksForSession();
-        this.setActiveTab("session");
-      } catch (err) {
-        alert("Failed to start session: " + err.message);
-      }
+      return this.runAction("start", ".btn-start-workout, .btn-start-wk, #btn-start-from-preview", "Starting\u2026", async () => {
+        try {
+          const res = await this.api("startSession", { workoutId });
+          this.setActiveSessionData(res);
+          this.views.session.currentPositionIndex = 0;
+          this.views.session.resetEntryInputs();
+          await this.loadBenchmarksForSession();
+          this.setActiveTab("session");
+        } catch (err) {
+          alert("Failed to start session: " + err.message);
+          return false;
+        }
+      });
     }
     async logSet(params) {
       if (!this.activeSession) return;
-      try {
-        const setLog = await this.api("logSet", {
-          sessionId: this.activeSession.id,
-          positionId: params.positionId,
-          exerciseId: params.exerciseId,
-          setIndex: params.setIndex,
-          isWarmup: params.isWarmup,
-          result: params.result
-        });
-        if (!this.activeSession.setLogs) this.activeSession.setLogs = [];
-        this.activeSession.setLogs.push(setLog);
-        this.views.session.lastLoggedSetId = setLog.id;
-        if (params.restSeconds) {
-          this.startRestTimer(params.restSeconds);
+      return this.runAction("logSet", "#btn-log-set", "Saving set\u2026", async () => {
+        try {
+          const sessionId = this.activeSession.id;
+          const setLog = await this.api("logSet", {
+            sessionId,
+            positionId: params.positionId,
+            exerciseId: params.exerciseId,
+            setIndex: params.setIndex,
+            isWarmup: params.isWarmup,
+            result: params.result,
+            restSeconds: params.restSeconds
+          });
+          this.setActiveSessionData(await this.api("getSessionDetails", { sessionId }));
+          this.views.session.lastLoggedSetId = setLog.id;
+          if (params.restSeconds) {
+            this.startRestTimer(params.restSeconds);
+          }
+          this.render();
+        } catch (err) {
+          let feedback = document.querySelector("#set-save-feedback");
+          if (!feedback) {
+            feedback = document.createElement("p");
+            feedback.id = "set-save-feedback";
+            feedback.className = "connection-error";
+            feedback.setAttribute("role", "alert");
+            document.querySelector("#btn-log-set")?.after(feedback);
+          }
+          feedback.textContent = "Couldn\u2019t save on this device. Keep this screen open and retry. Your entered values are still here. " + err.message;
+          return false;
         }
-        this.render();
-      } catch (err) {
-        alert("Failed to log set: " + err.message);
-      }
+      });
     }
     async undoSet(logId) {
       if (!this.activeSession) return;
@@ -2649,6 +4961,8 @@ header.app-header {
         await this.api("discardSession", { sessionId: this.activeSession.id });
       } catch (err) {
         console.warn("Backend discardSession failed:", err);
+        alert("Couldn\u2019t discard the session on this device. Please try again.");
+        return;
       }
       this.endRestTimer();
       this.activeSession = null;
@@ -2671,15 +4985,29 @@ header.app-header {
       if (!this.restTimer.active) return;
       this.restTimer.remainingSeconds = Math.max(0, this.restTimer.remainingSeconds + seconds);
       this.updateRestDisplay();
+      if (this.activeSession?.id) {
+        const restEndsAt = this.restTimer.remainingSeconds > 0 ? Date.now() + this.restTimer.remainingSeconds * 1e3 : null;
+        this.api("updateSessionProgress", {
+          sessionId: this.activeSession.id,
+          progress: { restEndsAt }
+        }).catch((err) => console.warn("Could not persist rest timer adjustment:", err));
+      }
     }
     endRestTimer() {
       if (this.restTimer.intervalId) {
         clearInterval(this.restTimer.intervalId);
         this.restTimer.intervalId = null;
       }
+      const wasActive = this.restTimer.active;
       this.restTimer.active = false;
       this.restTimer.remainingSeconds = 0;
       this.updateRestDisplay();
+      if (wasActive && this.activeSession?.id) {
+        this.api("updateSessionProgress", {
+          sessionId: this.activeSession.id,
+          progress: { restEndsAt: null }
+        }).catch((err) => console.warn("Could not persist rest timer end:", err));
+      }
     }
     updateRestDisplay() {
       const displayEl = document.querySelector(".rest-time-display");
@@ -2720,8 +5048,9 @@ header.app-header {
 
         <div style="display: flex; flex-direction: column; gap: 8px;">
           <button class="btn btn-primary btn-training-primary" id="btn-confirm-finish">
-            Complete & Save Workout
+            Finish workout
           </button>
+          <p class="metadata-text">Saved on this device immediately. The completed workout uploads when connected.</p>
           <button class="btn btn-secondary" id="btn-keep-training">
             Keep Training
           </button>
@@ -2735,7 +5064,7 @@ header.app-header {
       modal.addEventListener("click", (e) => {
         if (e.target === modal) close();
       });
-      modal.querySelector("#btn-confirm-finish")?.addEventListener("click", async () => {
+      modal.querySelector("#btn-confirm-finish")?.addEventListener("click", () => this.runAction("finish", "#btn-confirm-finish", "Finishing\u2026", async () => {
         const note = modal.querySelector("#input-session-note")?.value?.trim();
         try {
           await this.api("finishSession", {
@@ -2747,10 +5076,11 @@ header.app-header {
           close();
           await this.refresh();
           this.setActiveTab("progress");
+          this.uploadCompleted();
         } catch (err) {
           alert("Failed to finish session: " + err.message);
         }
-      });
+      }));
     }
     openSettingsModal() {
       const modalContainer = document.querySelector("#modal-container");
