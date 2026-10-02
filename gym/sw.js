@@ -1,6 +1,6 @@
 
 const PREFIX = 'my-gym-shell:' + new URL(self.registration.scope).pathname + ':';
-const CACHE = PREFIX + "4ba4991410415e65";
+const CACHE = PREFIX + "185f6ecc734ae093";
 const ASSETS = ["./index.html","./manifest.webmanifest","./icon.svg"].map(path => new URL(path, self.registration.scope).href);
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(

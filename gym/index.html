@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#121417">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -77,6 +77,7 @@
 }
 
 :root {
+  color-scheme: dark light;
   --font-display: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --radius-btn: 12px;
@@ -101,14 +102,35 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+html, body {
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-top: calc(88px + env(safe-area-inset-top, 0px));
+}
+
 body {
   font-family: var(--font-body);
   background-color: var(--bg-canvas);
   color: var(--text-primary);
   min-height: 100vh;
-  padding-bottom: 96px;
+  min-height: 100dvh;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+button, .stepper-btn, .stepper-center-input, .chip, [role="button"] {
+  touch-action: manipulation;
+}
+
+body, button, .stepper-btn, .set-panel-title, .status-pill, .app-header {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input, textarea, .exercise-notes, .benchmark-card-val {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 h1, h2, h3, h4, .font-display {
@@ -119,11 +141,11 @@ h1, h2, h3, h4, .font-display {
   font-variant-numeric: tabular-nums;
 }
 
-/* Header */
+/* Header with iOS Safe Area Notch Padding */
 header.app-header {
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-subtle);
-  padding: 12px 16px;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px 16px;
   position: sticky;
   top: 0;
   z-index: 50;
@@ -150,30 +172,70 @@ header.app-header {
 }
 
 /* A quiet, persistent explanation of where the current data came from. */
+/* Status Pill (DataStatus) */
 .header-identity { min-width: 0; }
 .connection-status {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
-  padding: 4px 0;
-  border: 0;
-  background: transparent;
+  min-height: 34px;
+  padding: 4px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface-raised);
   color: var(--text-secondary);
-  font: 600 0.875rem var(--font-body);
+  font: 600 0.8125rem var(--font-body);
   text-align: left;
   cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  user-select: none;
+  -webkit-user-select: none;
 }
-.connection-status:hover { text-decoration: underline; }
-.connection-status:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
-.connection-status[data-tone="loading"] { color: var(--primary); }
-.connection-status[data-tone="error"], .connection-error { color: var(--error); }
-.connection-status[data-tone="warning"], .connection-warning { color: var(--warning); }
-.connection-status[data-tone="success"] { color: var(--success); }
+.connection-status:hover { background: var(--bg-surface-selected); }
+.connection-status:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-pill); }
+.connection-status[data-tone="loading"] {
+  background: rgba(38, 112, 75, 0.12);
+  color: var(--success);
+  border-color: var(--success);
+}
+.connection-status[data-tone="error"], .connection-error {
+  background: rgba(181, 45, 65, 0.12);
+  color: var(--error);
+  border-color: var(--error);
+}
+.connection-status[data-tone="warning"], .connection-warning {
+  background: rgba(233, 196, 110, 0.2);
+  color: var(--warning);
+  border-color: var(--warning);
+}
+.connection-status[data-tone="success"] {
+  background: var(--bg-surface-raised);
+  color: var(--text-secondary);
+  border-color: var(--border-subtle);
+}
 .connection-icon { display: inline-block; flex-shrink: 0; }
 .connection-status[data-tone="loading"] .connection-icon { animation: connectionSpin 1.2s linear infinite; }
 @keyframes connectionSpin { to { transform: rotate(360deg); } }
 .loading-state { display: flex; flex-direction: column; gap: 16px; }
+.skeleton-bar {
+  height: 28px;
+  width: 180px;
+  border-radius: 6px;
+  background: var(--border-subtle);
+  margin-bottom: 8px;
+}
+.skeleton-title-bar {
+  height: 36px;
+  width: 220px;
+}
+@keyframes skeletonShimmer {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+.skeleton-card, .skeleton-bar {
+  animation: skeletonShimmer 1.5s ease-in-out infinite;
+}
 .skeleton-card {
   height: 190px;
   border: 1px solid var(--border-subtle);
@@ -601,10 +663,17 @@ header.app-header {
 }
 
 .numeric-entry-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
   margin-bottom: 20px;
+}
+
+@media (min-width: 540px) {
+  .numeric-entry-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .numeric-entry-box {
@@ -614,76 +683,88 @@ header.app-header {
   padding: 12px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .numeric-entry-label {
   font-size: 0.85rem;
   color: var(--text-secondary);
-  margin-bottom: 4px;
+  margin-bottom: 8px;
   font-weight: 600;
-}
-
-.numeric-value-container {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-
-.numeric-value-input {
-  font-family: var(--font-display);
-  font-size: 2.5rem;
-  line-height: 3rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  background: transparent;
-  border: none;
-  width: 90px;
   text-align: center;
-  font-variant-numeric: tabular-nums;
 }
 
-.numeric-value-input:focus {
-  outline: 2px solid var(--focus);
-  border-radius: 6px;
-}
-
-.numeric-unit {
-  font-size: 1rem;
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-.stepper-row {
+/* Massive Hybrid Stepper (>= 60x60px hit area) */
+.stepper-hybrid {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
-  width: 100%;
-}
-
-.stepper-btn {
-  flex: 1;
-  min-height: 48px;
+  align-items: stretch;
+  height: 64px;
   background: var(--bg-surface);
   border: 1px solid var(--border-control);
   border-radius: var(--radius-btn);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.stepper-btn {
+  flex: 0 0 64px;
+  min-width: 64px;
+  min-height: 64px;
+  background: var(--bg-surface-raised);
+  border: none;
   font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.8rem;
+  font-weight: 700;
   color: var(--text-primary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: scale(1);
-  transition: transform 160ms ease-out, background-color 120ms ease;
+  transition: transform 50ms ease-out, background-color 100ms ease;
   user-select: none;
+  -webkit-user-select: none;
 }
 
 .stepper-btn:active {
-  background: var(--bg-surface-raised);
-  transform: scale(0.95);
-  transition: transform 70ms ease-out;
+  background: var(--bg-surface-selected);
+  transform: scale(0.96);
+}
+
+.stepper-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: transparent;
+  padding: 0 8px;
+  min-width: 0;
+}
+
+.stepper-center-input {
+  width: 100%;
+  max-width: 110px;
+  background: transparent;
+  border: none;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.stepper-center-input:focus {
+  outline: 2px solid var(--focus);
+  border-radius: 6px;
+}
+
+.stepper-unit {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  font-weight: 600;
 }
 
 /* Compact Set Outline */
@@ -807,10 +888,14 @@ header.app-header {
   max-width: 580px;
   max-height: 90vh;
   overflow-y: auto;
-  padding: 24px;
+  padding: 24px 24px calc(24px + env(safe-area-inset-bottom, 0px)) 24px;
   box-shadow: var(--shadow-overlay);
   display: flex;
   flex-direction: column;
+}
+
+.session-footer-actions {
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
 }
 
 @media (min-width: 640px) {
@@ -931,6 +1016,61 @@ header.app-header {
   animation: valueHighlight 400ms ease-out;
 }
 
+/* PWA Install Guidance Banner */
+.install-banner {
+  background: var(--bg-surface-raised);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  z-index: 60;
+  position: relative;
+}
+
+.install-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.install-banner-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.install-banner-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.install-banner-text strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.install-banner-text span {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.install-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-dismiss-banner {
+  padding: 4px 8px;
+  font-size: 1rem;
+  line-height: 1;
+}
+
 /* Reduced Motion Override */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
@@ -979,8 +1119,8 @@ header.app-header {
 
   <!-- Main View Container -->
   <main id="app-root" class="container" aria-busy="true">
-    <section class="loading-state">
-      <h1 class="page-title">Your workouts</h1>
+    <section class="loading-state" id="initial-skeleton">
+      <div class="skeleton-bar skeleton-title-bar" aria-hidden="true"></div>
       <p class="metadata-text" role="status">Loading your workouts…</p>
       <div class="skeleton-card" aria-hidden="true"></div>
       <div class="skeleton-card skeleton-short" aria-hidden="true"></div>
@@ -1180,7 +1320,8 @@ header.app-header {
         const response = await this.fetchFn(gasUrl, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(command)
+          body: JSON.stringify(command),
+          keepalive: true
         });
         const res = await response.json();
         if (res.success) return res.data;
@@ -1563,7 +1704,8 @@ header.app-header {
               <div class="card-raised" style="margin-bottom: 0; padding: 12px 16px;">
                 <div style="font-weight: 600; color: var(--text-primary);">${idx + 1}. ${ex.name}</div>
                 <div class="metadata-text">${setsDesc} ${p.restSeconds ? `\xB7 ${p.restSeconds}s rest` : ""}</div>
-                ${p.notes ? `<div class="metadata-text" style="margin-top: 4px;">${p.notes}</div>` : ""}
+                ${p.notes ? `<div class="metadata-text" style="margin-top: 4px;">Note: ${p.notes}</div>` : ""}
+                ${p.instructions || ex.instructions ? `<div class="metadata-text" style="margin-top: 4px; color: var(--text-secondary);"><span style="font-weight: 600;">Cues:</span> ${p.instructions || ex.instructions}</div>` : ""}
               </div>
             `;
       }).join("")}
@@ -1988,6 +2130,146 @@ header.app-header {
     }
   };
 
+  // src/client/components/stepper.js
+  function bindStepper({
+    minusBtn,
+    plusBtn,
+    inputEl,
+    getValue,
+    setValue,
+    step = 1,
+    min = 0,
+    max = 999,
+    precision = 1,
+    onChanged
+  }) {
+    let holdTimeout = null;
+    let repeatInterval = null;
+    function triggerHaptic() {
+      if (typeof navigator !== "undefined" && "vibrate" in navigator && typeof navigator.vibrate === "function") {
+        try {
+          navigator.vibrate(12);
+        } catch {
+        }
+      }
+    }
+    function roundValue(v) {
+      if (precision === 0) return Math.round(v);
+      const factor = Math.pow(10, precision);
+      return Math.round(v * factor) / factor;
+    }
+    function clamp(v) {
+      return Math.min(max, Math.max(min, v));
+    }
+    function applyDelta(delta) {
+      const current = Number(getValue()) || 0;
+      const next = roundValue(clamp(current + delta));
+      setValue(next);
+      if (onChanged) onChanged(next);
+      triggerHaptic();
+    }
+    function stopRepeating(btn, pointerId) {
+      if (holdTimeout) {
+        clearTimeout(holdTimeout);
+        holdTimeout = null;
+      }
+      if (repeatInterval) {
+        clearInterval(repeatInterval);
+        repeatInterval = null;
+      }
+      if (btn && pointerId !== void 0 && typeof btn.releasePointerCapture === "function") {
+        try {
+          btn.releasePointerCapture(pointerId);
+        } catch {
+        }
+      }
+    }
+    function setupButton(btn, delta) {
+      if (!btn) return () => {
+      };
+      const onPointerDown = (e) => {
+        applyDelta(delta);
+        if (e?.pointerId !== void 0 && typeof btn.setPointerCapture === "function") {
+          try {
+            btn.setPointerCapture(e.pointerId);
+          } catch {
+          }
+        }
+        stopRepeating();
+        holdTimeout = setTimeout(() => {
+          repeatInterval = setInterval(() => {
+            applyDelta(delta);
+          }, 80);
+        }, 400);
+      };
+      const onPointerUp = (e) => stopRepeating(btn, e?.pointerId);
+      const onPointerCancel = (e) => stopRepeating(btn, e?.pointerId);
+      const onLostCapture = (e) => stopRepeating(btn, e?.pointerId);
+      const onPointerLeave = (e) => stopRepeating(btn, e?.pointerId);
+      btn.addEventListener("pointerdown", onPointerDown);
+      btn.addEventListener("pointerup", onPointerUp);
+      btn.addEventListener("pointercancel", onPointerCancel);
+      btn.addEventListener("lostpointercapture", onLostCapture);
+      btn.addEventListener("pointerleave", onPointerLeave);
+      return () => {
+        stopRepeating(btn);
+        btn.removeEventListener("pointerdown", onPointerDown);
+        btn.removeEventListener("pointerup", onPointerUp);
+        btn.removeEventListener("pointercancel", onPointerCancel);
+        btn.removeEventListener("lostpointercapture", onLostCapture);
+        btn.removeEventListener("pointerleave", onPointerLeave);
+      };
+    }
+    const unbindMinus = setupButton(minusBtn, -step);
+    const unbindPlus = setupButton(plusBtn, step);
+    let unbindInput = () => {
+    };
+    if (inputEl) {
+      const onFocus = () => {
+        if (typeof inputEl.select === "function") {
+          inputEl.select();
+        }
+      };
+      const commitInput = () => {
+        const raw = String(inputEl.value).trim();
+        const parsed = parseFloat(raw);
+        if (isNaN(parsed)) {
+          const fallback = getValue();
+          inputEl.value = fallback == null ? "" : String(fallback);
+          return;
+        }
+        const clamped = roundValue(clamp(parsed));
+        setValue(clamped);
+        inputEl.value = String(clamped);
+        if (onChanged) onChanged(clamped);
+      };
+      const onKeyDown = (e) => {
+        if (e.key === "Enter") {
+          commitInput();
+          if (typeof inputEl.blur === "function") inputEl.blur();
+        }
+      };
+      inputEl.addEventListener("focus", onFocus);
+      inputEl.addEventListener("blur", commitInput);
+      inputEl.addEventListener("change", commitInput);
+      inputEl.addEventListener("keydown", onKeyDown);
+      unbindInput = () => {
+        inputEl.removeEventListener("focus", onFocus);
+        inputEl.removeEventListener("blur", commitInput);
+        inputEl.removeEventListener("change", commitInput);
+        inputEl.removeEventListener("keydown", onKeyDown);
+      };
+    }
+    return {
+      destroy() {
+        stopRepeating();
+        unbindMinus();
+        unbindPlus();
+        unbindInput();
+      }
+    };
+  }
+
   // src/client/views/session.js
   var ActiveSessionView = class {
     constructor(app2) {
@@ -1997,6 +2279,7 @@ header.app-header {
       this.repsInputVal = null;
       this.isWarmup = false;
       this.lastLoggedSetId = null;
+      this.steppers = [];
     }
     getCurrentPosition() {
       const session = this.app.activeSession;
@@ -2037,7 +2320,7 @@ header.app-header {
         </div>
       `;
       }
-      const unit = localStorage.getItem("my_gym_units") || "kg";
+      const unit = typeof localStorage !== "undefined" && localStorage.getItem?.("my_gym_units") || "kg";
       const allPosLogs = (session.setLogs || []).filter((l) => l.positionId === pos.id && !l.voidedAt);
       const warmupLogs = allPosLogs.filter((l) => l.isWarmup);
       const workingLogs = allPosLogs.filter((l) => !l.isWarmup);
@@ -2068,19 +2351,24 @@ header.app-header {
       return `
       <div style="display: flex; flex-direction: column; gap: 16px;">
         <!-- Top Orientation Bar -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
           <div>
             <div class="metadata-text" style="font-weight: 600; text-transform: uppercase;">
               ${session.workoutName} \xB7 Exercise ${this.currentPositionIndex + 1} of ${totalPositions}
             </div>
             <h1 class="exercise-title" style="margin-top: 2px;">${exercise.name}</h1>
             <div class="metadata-text">
-              ${exercise.equipment ? exercise.equipment + " \xB7 " : ""}${exercise.loggingConvention || "Standard resistance"}
+              ${exercise.equipment || exercise.equipmentConvention ? (exercise.equipment || exercise.equipmentConvention) + " \xB7 " : ""}${exercise.loggingConvention || "Standard resistance"}
             </div>
           </div>
-          <button class="btn btn-secondary btn-sm" id="btn-session-outline" style="white-space: nowrap;">
-            \u{1F4CB} Outline
-          </button>
+          <div style="display: flex; gap: 8px; align-items: center; flex-shrink: 0;">
+            <button class="btn btn-secondary btn-sm" id="btn-exercise-info" style="white-space: nowrap;" aria-label="Exercise instructions and details">
+              \u2139\uFE0F Info
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-session-outline" style="white-space: nowrap;">
+              \u{1F4CB} Outline
+            </button>
+          </div>
         </div>
 
         <!-- Target prescription & notes -->
@@ -2130,26 +2418,26 @@ header.app-header {
             <!-- Weight Box -->
             <div class="numeric-entry-box" id="box-set-weight">
               <span class="numeric-entry-label">Weight</span>
-              <div class="numeric-value-container">
-                <input type="number" step="0.5" class="numeric-value-input" id="input-set-weight" value="${this.weightInputVal}">
-                <span class="numeric-unit">${unit}</span>
-              </div>
-              <div class="stepper-row">
-                <button class="stepper-btn" id="btn-weight-minus">-2.5</button>
-                <button class="stepper-btn" id="btn-weight-plus">+2.5</button>
+              <div class="stepper-hybrid" id="stepper-weight">
+                <button type="button" class="stepper-btn stepper-btn-minus" id="btn-weight-minus" aria-label="Decrease weight">\u2212</button>
+                <div class="stepper-center">
+                  <input type="text" inputmode="decimal" pattern="[0-9]*.?[0-9]*" class="stepper-center-input" id="input-set-weight" value="${this.weightInputVal ?? ""}" aria-label="Weight">
+                  <span class="stepper-unit">${unit}</span>
+                </div>
+                <button type="button" class="stepper-btn stepper-btn-plus" id="btn-weight-plus" aria-label="Increase weight">+</button>
               </div>
             </div>
 
             <!-- Reps Box -->
             <div class="numeric-entry-box" id="box-set-reps">
               <span class="numeric-entry-label">Reps</span>
-              <div class="numeric-value-container">
-                <input type="number" step="1" class="numeric-value-input" id="input-set-reps" value="${this.repsInputVal}">
-                <span class="numeric-unit">reps</span>
-              </div>
-              <div class="stepper-row">
-                <button class="stepper-btn" id="btn-reps-minus">-1</button>
-                <button class="stepper-btn" id="btn-reps-plus">+1</button>
+              <div class="stepper-hybrid" id="stepper-reps">
+                <button type="button" class="stepper-btn stepper-btn-minus" id="btn-reps-minus" aria-label="Decrease reps">\u2212</button>
+                <div class="stepper-center">
+                  <input type="text" inputmode="numeric" pattern="[0-9]*" class="stepper-center-input" id="input-set-reps" value="${this.repsInputVal ?? ""}" aria-label="Reps">
+                  <span class="stepper-unit">reps</span>
+                </div>
+                <button type="button" class="stepper-btn stepper-btn-plus" id="btn-reps-plus" aria-label="Increase reps">+</button>
               </div>
             </div>
           </div>
@@ -2223,7 +2511,7 @@ header.app-header {
         </div>
 
         <!-- Exercise & Session Navigation Footer -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-subtle);">
+        <div class="session-footer-actions" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-subtle);">
           <button class="btn btn-secondary" id="btn-prev-exercise" ${this.currentPositionIndex === 0 ? "disabled" : ""}>
             \u2190 Previous
           </button>
@@ -2299,26 +2587,46 @@ header.app-header {
           setTimeout(() => box.classList.remove("value-changed"), 400);
         }
       };
-      container.querySelector("#btn-weight-minus")?.addEventListener("click", () => {
-        this.weightInputVal = Math.max(0, (this.weightInputVal || 0) - 2.5);
-        if (weightInput) weightInput.value = this.weightInputVal;
-        triggerHighlight("#box-set-weight");
-      });
-      container.querySelector("#btn-weight-plus")?.addEventListener("click", () => {
-        this.weightInputVal = (this.weightInputVal || 0) + 2.5;
-        if (weightInput) weightInput.value = this.weightInputVal;
-        triggerHighlight("#box-set-weight");
-      });
-      container.querySelector("#btn-reps-minus")?.addEventListener("click", () => {
-        this.repsInputVal = Math.max(0, (this.repsInputVal || 0) - 1);
-        if (repsInput) repsInput.value = this.repsInputVal;
-        triggerHighlight("#box-set-reps");
-      });
-      container.querySelector("#btn-reps-plus")?.addEventListener("click", () => {
-        this.repsInputVal = (this.repsInputVal || 0) + 1;
-        if (repsInput) repsInput.value = this.repsInputVal;
-        triggerHighlight("#box-set-reps");
-      });
+      if (this.steppers) {
+        this.steppers.forEach((s) => s?.destroy?.());
+      }
+      this.steppers = [];
+      const weightMinus = container.querySelector("#btn-weight-minus");
+      const weightPlus = container.querySelector("#btn-weight-plus");
+      if (weightMinus && weightPlus && weightInput) {
+        this.steppers.push(bindStepper({
+          minusBtn: weightMinus,
+          plusBtn: weightPlus,
+          inputEl: weightInput,
+          getValue: () => this.weightInputVal,
+          setValue: (v) => {
+            this.weightInputVal = v;
+          },
+          step: 2.5,
+          min: 0,
+          max: 999,
+          precision: 1,
+          onChanged: () => triggerHighlight("#box-set-weight")
+        }));
+      }
+      const repsMinus = container.querySelector("#btn-reps-minus");
+      const repsPlus = container.querySelector("#btn-reps-plus");
+      if (repsMinus && repsPlus && repsInput) {
+        this.steppers.push(bindStepper({
+          minusBtn: repsMinus,
+          plusBtn: repsPlus,
+          inputEl: repsInput,
+          getValue: () => this.repsInputVal,
+          setValue: (v) => {
+            this.repsInputVal = v;
+          },
+          step: 1,
+          min: 0,
+          max: 999,
+          precision: 0,
+          onChanged: () => triggerHighlight("#box-set-reps")
+        }));
+      }
       container.querySelector("#btn-log-set")?.addEventListener("click", async () => {
         const weight = parseFloat(weightInput ? weightInput.value : this.weightInputVal) || 0;
         const reps = parseInt(repsInput ? repsInput.value : this.repsInputVal, 10) || 0;
@@ -2333,13 +2641,20 @@ header.app-header {
           result: { weight, reps },
           restSeconds: pos.restSeconds || 90
         });
-        if (saved) this.isWarmup = false;
+        if (saved !== false) {
+          this.weightInputVal = weight;
+          this.repsInputVal = reps;
+          this.isWarmup = false;
+        }
       });
       container.querySelectorAll(".btn-undo-set").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const logId = btn.dataset.logId;
           await this.app.undoSet(logId);
         });
+      });
+      container.querySelector("#btn-exercise-info")?.addEventListener("click", () => {
+        this.openExerciseInfoModal();
       });
       container.querySelector("#btn-session-outline")?.addEventListener("click", () => {
         this.openOutlineModal();
@@ -2381,6 +2696,9 @@ header.app-header {
         });
         this.currentPositionIndex = index;
         this.resetEntryInputs();
+        if (typeof window !== "undefined" && typeof window.scrollTo === "function") {
+          window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+        }
         this.app.render();
       } catch (error) {
         alert("Couldn\u2019t save your place on this device: " + error.message);
@@ -2409,6 +2727,7 @@ header.app-header {
                 <div>
                   <div style="font-weight: 600; color: var(--text-primary);">${idx + 1}. ${ex.name}</div>
                   <div class="metadata-text">${logs.length} of ${p.plannedSets?.length || 3} working sets completed</div>
+                  ${p.instructions || ex.instructions ? `<div class="metadata-text" style="margin-top: 2px; font-size: 0.8rem; color: var(--text-secondary);">${p.instructions || ex.instructions}</div>` : ""}
                 </div>
                 ${isCurrent ? '<span class="chip chip-primary" style="font-size: 0.75rem;">Current</span>' : ""}
               </div>
@@ -2427,6 +2746,100 @@ header.app-header {
           modal.remove();
           this.moveTo(parseInt(item.dataset.navIdx, 10));
         });
+      });
+    }
+    openExerciseInfoModal() {
+      const session = this.app.activeSession;
+      if (!session) return;
+      const pos = this.getCurrentPosition();
+      const exercise = this.getCurrentExercise();
+      if (!pos || !exercise) return;
+      const plannedSetsCount = pos.plannedSets?.length || 3;
+      const currentPlannedSet = pos.plannedSets?.[0];
+      const equipment = exercise.equipment || exercise.equipmentConvention || "Standard equipment";
+      const instructions = exercise.instructions || exercise.description || "No specific form instructions recorded for this exercise.";
+      const positionNotes = [pos.instructions, pos.notes].filter(Boolean).join(" \xB7 ");
+      const restSecs = pos.restSeconds || 90;
+      const restText = `${restSecs}s (${Math.round(restSecs / 60)} min)`;
+      const alternatives = (pos.allowedExercises || []).filter((e) => e.id !== exercise.id);
+      const modal = document.createElement("div");
+      modal.className = "modal-overlay";
+      modal.innerHTML = `
+      <div class="modal-sheet" style="max-height: 85vh; overflow-y: auto;">
+        <div class="modal-header">
+          <div>
+            <h2 class="modal-title" style="margin-bottom: 2px;">${exercise.name}</h2>
+            <div class="metadata-text">${equipment} \xB7 ${exercise.loggingConvention || exercise.recordingKind || "Resistance"}</div>
+          </div>
+          <button class="btn btn-quiet btn-sm" id="btn-close-exercise-info" style="font-size: 1.25rem;" aria-label="Close instructions">\u2715</button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 12px;">
+          <!-- Technique / Form Instructions -->
+          <div class="card" style="margin-bottom: 0; padding: 14px 16px;">
+            <div class="section-title" style="font-size: 1rem; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+              <span>\u{1F4D6}</span> Instructions & Form Cues
+            </div>
+            <p class="body-text" style="font-size: 0.95rem; line-height: 1.5; margin: 0; color: var(--text-primary);">
+              ${instructions}
+            </p>
+          </div>
+
+          <!-- Prescription & Target Details -->
+          <div class="card-raised" style="margin-bottom: 0; padding: 14px 16px;">
+            <div class="section-title" style="font-size: 1rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              <span>\u{1F3AF}</span> Today's Targets
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; font-size: 0.9rem;">
+              <div>
+                <span class="metadata-text">Planned sets:</span>
+                <div style="font-weight: 600;">${plannedSetsCount} sets</div>
+              </div>
+              <div>
+                <span class="metadata-text">Target reps:</span>
+                <div style="font-weight: 600;">${currentPlannedSet?.repsTarget || "8-10"} reps</div>
+              </div>
+              <div>
+                <span class="metadata-text">Target RPE:</span>
+                <div style="font-weight: 600;">${pos.targetRpe || currentPlannedSet?.rpeTarget || "None"}</div>
+              </div>
+              <div>
+                <span class="metadata-text">Rest interval:</span>
+                <div style="font-weight: 600;">${restText}</div>
+              </div>
+            </div>
+            ${positionNotes ? `
+              <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-subtle); font-size: 0.9rem;">
+                <span class="metadata-text">Position Note:</span>
+                <div style="color: var(--text-primary); font-weight: 500; margin-top: 2px;">${positionNotes}</div>
+              </div>
+            ` : ""}
+          </div>
+
+          <!-- Alternatives (if available) -->
+          ${alternatives.length > 0 ? `
+            <div class="card" style="margin-bottom: 0; padding: 14px 16px;">
+              <div class="section-title" style="font-size: 1rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                <span>\u{1F504}</span> Allowed Alternatives
+              </div>
+              <ul style="margin: 0; padding-left: 20px; font-size: 0.9rem; color: var(--text-secondary);">
+                ${alternatives.map((alt) => `
+                  <li style="margin-bottom: 4px;">
+                    <strong style="color: var(--text-primary);">${alt.name}</strong>
+                    ${alt.equipmentConvention ? `(${alt.equipmentConvention})` : ""}
+                  </li>
+                `).join("")}
+              </ul>
+            </div>
+          ` : ""}
+        </div>
+      </div>
+    `;
+      const container = document.querySelector("#modal-container") || document.body;
+      container.appendChild(modal);
+      modal.querySelector("#btn-close-exercise-info")?.addEventListener("click", () => modal.remove());
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) modal.remove();
       });
     }
   };
@@ -4595,6 +5008,9 @@ header.app-header {
     if (!str) return "";
     return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
+  function isStandaloneMode() {
+    return typeof window !== "undefined" && (window.matchMedia?.("(display-mode: standalone)").matches || Boolean(window.navigator?.standalone));
+  }
   var GymApp = class {
     constructor() {
       this.activeTab = "today";
@@ -4628,6 +5044,7 @@ header.app-header {
     }
     async init() {
       this.bindGlobalEvents();
+      this.setupPwaInstallBanner();
       this.dataStatus = new DataStatus(this);
       this.offline.subscribe(() => this.dataStatus.update());
       prepareOfflineShell().then((ready) => {
@@ -4647,6 +5064,62 @@ header.app-header {
       window.addEventListener("online", () => this.syncAndRefresh());
       window.addEventListener("focus", () => this.uploadCompleted());
       this.retryTimer = setInterval(() => this.uploadCompleted(), 6e4);
+    }
+    setupPwaInstallBanner() {
+      if (typeof window === "undefined" || typeof document === "undefined") return;
+      if (isStandaloneMode()) return;
+      try {
+        const dismissedUntil = localStorage?.getItem("my_gym_install_dismissed");
+        if (dismissedUntil && Number(dismissedUntil) > Date.now()) return;
+      } catch {
+      }
+      let banner = document.querySelector("#pwa-install-banner");
+      if (!banner) {
+        banner = document.createElement("div");
+        banner.id = "pwa-install-banner";
+        banner.className = "install-banner";
+        document.body.prepend(banner);
+      }
+      const isIos = typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent || "");
+      let deferredPrompt = null;
+      if (typeof window !== "undefined") {
+        window.addEventListener("beforeinstallprompt", (e) => {
+          e.preventDefault();
+          deferredPrompt = e;
+          const installBtn = banner.querySelector("#btn-pwa-install");
+          if (installBtn) installBtn.style.display = "inline-flex";
+        });
+      }
+      banner.innerHTML = `
+      <div class="install-banner-content">
+        <span class="install-banner-icon" aria-hidden="true">\u{1F4F2}</span>
+        <div class="install-banner-text">
+          <strong>Install App for Fullscreen</strong>
+          <span>${isIos ? 'Tap Share \u238B then "Add to Home Screen" \u229E to hide the browser bar.' : "Add to home screen for fullscreen gym tracking."}</span>
+        </div>
+      </div>
+      <div class="install-banner-actions">
+        ${!isIos ? '<button type="button" class="btn btn-primary btn-sm" id="btn-pwa-install" style="display: none;">Install</button>' : ""}
+        <button type="button" class="btn btn-quiet btn-sm btn-dismiss-banner" id="btn-dismiss-install" aria-label="Dismiss banner">\u2715</button>
+      </div>
+    `;
+      banner.querySelector("#btn-pwa-install")?.addEventListener("click", async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const choice = await deferredPrompt.userChoice;
+          if (choice && choice.outcome === "accepted") {
+            banner.remove();
+          }
+          deferredPrompt = null;
+        }
+      });
+      banner.querySelector("#btn-dismiss-install")?.addEventListener("click", () => {
+        banner.remove();
+        try {
+          localStorage?.setItem("my_gym_install_dismissed", String(Date.now() + 14 * 864e5));
+        } catch {
+        }
+      });
     }
     async api(action, payload = {}) {
       try {
@@ -4825,6 +5298,9 @@ header.app-header {
     }
     setActiveTab(tab) {
       this.activeTab = tab;
+      if (typeof window !== "undefined" && typeof window.scrollTo === "function") {
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      }
       this.render();
     }
     updateNavState() {
@@ -4879,18 +5355,25 @@ header.app-header {
         root.querySelector("#btn-setup-connection")?.addEventListener("click", () => this.openSettingsModal());
         return;
       }
-      if (this.activeTab === "session") {
-        root.innerHTML = this.views.session.render();
-        this.views.session.attachEvents(root);
-      } else if (this.activeTab === "workouts") {
-        root.innerHTML = this.views.workouts.render();
-        this.views.workouts.attachEvents(root);
-      } else if (this.activeTab === "progress") {
-        root.innerHTML = this.views.progress.render();
-        this.views.progress.attachEvents(root);
+      const renderActiveView = () => {
+        if (this.activeTab === "session") {
+          root.innerHTML = this.views.session.render();
+          this.views.session.attachEvents(root);
+        } else if (this.activeTab === "workouts") {
+          root.innerHTML = this.views.workouts.render();
+          this.views.workouts.attachEvents(root);
+        } else if (this.activeTab === "progress") {
+          root.innerHTML = this.views.progress.render();
+          this.views.progress.attachEvents(root);
+        } else {
+          root.innerHTML = this.views.today.render();
+          this.views.today.attachEvents(root);
+        }
+      };
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(renderActiveView);
       } else {
-        root.innerHTML = this.views.today.render();
-        this.views.today.attachEvents(root);
+        renderActiveView();
       }
     }
     async startWorkout(workoutId) {
