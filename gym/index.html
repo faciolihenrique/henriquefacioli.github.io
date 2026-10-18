@@ -843,6 +843,42 @@ header.app-header {
   gap: 16px;
 }
 
+.rest-panel-complete {
+  border: 2px solid var(--success);
+  background: var(--bg-surface-selected);
+}
+
+.set-mode-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-surface-raised);
+  padding: 2px;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--border-subtle);
+}
+
+.set-timer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-btn);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+
+.set-timer-display {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
 .rest-time-display {
   font-family: var(--font-display);
   font-size: 2.5rem;
@@ -1433,8 +1469,8 @@ header.app-header {
 
   // src/client/views/today.js
   var TodayView = class {
-    constructor(app2) {
-      this.app = app2;
+    constructor(app) {
+      this.app = app;
     }
     render() {
       const today = /* @__PURE__ */ new Date();
@@ -1602,8 +1638,8 @@ header.app-header {
 
   // src/client/views/workouts.js
   var WorkoutsView = class {
-    constructor(app2) {
-      this.app = app2;
+    constructor(app) {
+      this.app = app;
     }
     render() {
       const workouts = this.app.workouts || [];
@@ -1932,10 +1968,51 @@ header.app-header {
     }
   };
 
+  // src/client/exercise-mode.js
+  function isBodyweightExercise(exercise) {
+    if (!exercise || typeof exercise !== "object") {
+      return false;
+    }
+    const equipmentConvention = String(exercise.equipmentConvention || "").toLowerCase();
+    const equipment = String(exercise.equipment || "").toLowerCase();
+    if (equipmentConvention === "bodyweight" || equipment === "bodyweight") {
+      return true;
+    }
+    const recordingKind = exercise.recordingKind || "";
+    const loggingConvention = exercise.loggingConvention || "";
+    return recordingKind === "bodyweight_reps" || recordingKind === "weighted_bodyweight" || loggingConvention === "bodyweight_reps" || loggingConvention === "weighted_bodyweight";
+  }
+  function parseDurationTargetSeconds(repsTarget) {
+    if (repsTarget === null || repsTarget === void 0) {
+      return null;
+    }
+    const match = String(repsTarget).match(/^\s*(\d+)(?:\s*-\s*\d+)?\s*(?:s|sec|secs)\s*$/i);
+    if (!match) {
+      return null;
+    }
+    const seconds = Number.parseInt(match[1], 10);
+    return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
+  }
+  function resolveDefaultSetMode(exercise, plannedSet) {
+    if (exercise?.recordingKind === "timed_duration" || exercise?.loggingConvention === "timed_duration" || parseDurationTargetSeconds(plannedSet?.repsTarget) !== null) {
+      return "timed";
+    }
+    return "reps";
+  }
+  function formatSetResult(result, unit = "kg", { includeRepsSuffix = true } = {}) {
+    if (result?.durationSeconds > 0) {
+      return result?.weight > 0 ? `${result.weight} ${unit} \xD7 ${result.durationSeconds}s` : `${result.durationSeconds}s`;
+    }
+    if (result?.weight > 0) {
+      return includeRepsSuffix ? `${result.weight} ${unit} \xD7 ${result?.reps || 0} reps` : `${result.weight} ${unit} \xD7 ${result?.reps || 0}`;
+    }
+    return `${result?.reps || 0} reps`;
+  }
+
   // src/client/views/progress.js
   var ProgressView = class {
-    constructor(app2) {
-      this.app = app2;
+    constructor(app) {
+      this.app = app;
       this.activeTab = "sessions";
       this.selectedExerciseId = null;
       this.exerciseHistory = [];
@@ -2066,7 +2143,7 @@ header.app-header {
           day: "numeric",
           year: "numeric"
         });
-        const setsDesc = entry.sets.map((s, idx) => `Set ${idx + 1}: ${s.result?.weight || 0} ${unit} \xD7 ${s.result?.reps || 0}`).join(" \xB7 ");
+        const setsDesc = entry.sets.map((s, idx) => `Set ${idx + 1}: ${formatSetResult(s.result, unit)}`).join(" \xB7 ");
         return `
             <div class="card" style="margin-bottom: 0; padding: 14px 18px;">
               <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
@@ -2278,10 +2355,14 @@ header.app-header {
 
   // src/client/haptics.js
   var HAPTIC_STORAGE_KEY = "my_gym_haptics";
+  var SOUND_STORAGE_KEY = "my_gym_sound";
+  var NOTIFY_STORAGE_KEY = "my_gym_notifications";
   var HapticManager = class {
-    constructor(storage = typeof localStorage !== "undefined" ? localStorage : null, nav = null) {
+    constructor(storage = typeof localStorage !== "undefined" ? localStorage : null, nav = null, audioContextFactory = null) {
       this.storage = storage;
       this.nav = nav;
+      this.audioContextFactory = audioContextFactory;
+      this._audioCtx = null;
     }
     getNav() {
       return this.nav || (typeof navigator !== "undefined" ? navigator : null);
@@ -2319,6 +2400,110 @@ header.app-header {
         this._fallbackEnabled = Boolean(enabled);
       }
     }
+    isSoundEnabled() {
+      try {
+        const store = this.getStorage();
+        if (store) {
+          return store.getItem(SOUND_STORAGE_KEY) !== "false";
+        }
+        return this._fallbackSoundEnabled !== false;
+      } catch {
+        return this._fallbackSoundEnabled !== false;
+      }
+    }
+    setSoundEnabled(enabled) {
+      try {
+        const store = this.getStorage();
+        if (store) {
+          store.setItem(SOUND_STORAGE_KEY, enabled ? "true" : "false");
+        } else {
+          this._fallbackSoundEnabled = Boolean(enabled);
+        }
+      } catch {
+        this._fallbackSoundEnabled = Boolean(enabled);
+      }
+    }
+    isNotificationsEnabled() {
+      try {
+        const store = this.getStorage();
+        return store ? store.getItem(NOTIFY_STORAGE_KEY) === "true" : Boolean(this._fallbackNotificationsEnabled);
+      } catch {
+        return false;
+      }
+    }
+    setNotificationsEnabled(enabled) {
+      try {
+        const store = this.getStorage();
+        if (store) {
+          store.setItem(NOTIFY_STORAGE_KEY, enabled ? "true" : "false");
+        } else {
+          this._fallbackNotificationsEnabled = Boolean(enabled);
+        }
+      } catch {
+        this._fallbackNotificationsEnabled = Boolean(enabled);
+      }
+    }
+    getAudioContext() {
+      if (this._audioCtx) return this._audioCtx;
+      try {
+        if (typeof this.audioContextFactory === "function") {
+          this._audioCtx = this.audioContextFactory();
+          return this._audioCtx;
+        }
+        if (typeof window !== "undefined") {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (typeof AudioCtx === "function") {
+            this._audioCtx = new AudioCtx();
+            return this._audioCtx;
+          }
+        }
+      } catch {
+        return null;
+      }
+      return null;
+    }
+    unlockAudio() {
+      try {
+        const ctx = this.getAudioContext();
+        if (!ctx) return false;
+        if (ctx.state === "suspended" && typeof ctx.resume === "function") {
+          ctx.resume();
+        }
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    playTimerCompleteSound() {
+      if (!this.isSoundEnabled()) return false;
+      try {
+        const ctx = this.getAudioContext();
+        if (!ctx) return false;
+        if (ctx.state === "suspended" && typeof ctx.resume === "function") {
+          ctx.resume();
+        }
+        const now = ctx.currentTime || 0;
+        const notes = [523.25, 659.25, 783.99];
+        const offsets = [0, 0.14, 0.28];
+        const duration = 0.18;
+        notes.forEach((freq, idx) => {
+          const start = now + offsets[idx];
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(freq, start);
+          gain.gain.setValueAtTime(0.25, start);
+          gain.gain.exponentialRampToValueAtTime(1e-3, start + duration);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(start);
+          osc.stop(start + duration);
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    }
     vibrate(pattern) {
       if (!this.isEnabled() || !this.isSupported()) return false;
       try {
@@ -2335,18 +2520,26 @@ header.app-header {
       return this.vibrate([20, 60, 20]);
     }
     triggerRestTimerComplete() {
-      return this.vibrate([80, 50, 80]);
+      return this.vibrate([200, 100, 200, 100, 300]);
+    }
+    triggerTimerAlert() {
+      const vibrated = this.triggerRestTimerComplete();
+      const playedSound = this.playTimerCompleteSound();
+      return { vibrated, playedSound };
     }
   };
   var hapticManager = new HapticManager();
 
   // src/client/views/session.js
   var ActiveSessionView = class {
-    constructor(app2) {
-      this.app = app2;
+    constructor(app) {
+      this.app = app;
       this.currentPositionIndex = 0;
       this.weightInputVal = null;
       this.repsInputVal = null;
+      this.durationInputVal = null;
+      this.setMode = null;
+      this.showAddedWeight = null;
       this.isWarmup = false;
       this.lastLoggedSetId = null;
       this.steppers = [];
@@ -2399,8 +2592,19 @@ header.app-header {
       const currentPlannedSet = pos.plannedSets?.[workingLogs.length] || pos.plannedSets?.[pos.plannedSets.length - 1];
       const benchmark = this.app.benchmarks?.[exercise.id] || null;
       const benchSet = benchmark?.sets?.[workingLogs.length] || benchmark?.sets?.[0];
+      const isBw = isBodyweightExercise(exercise);
+      if (this.setMode === null) {
+        this.setMode = resolveDefaultSetMode(exercise, currentPlannedSet);
+      }
+      if (this.showAddedWeight === null) {
+        const lastWorkingLog = workingLogs[workingLogs.length - 1];
+        this.showAddedWeight = isBw ? Boolean(benchSet?.result?.weight > 0 || lastWorkingLog?.result?.weight > 0) : false;
+      }
+      const showWeightBox = !isBw || Boolean(this.showAddedWeight);
       if (this.weightInputVal === null) {
-        if (benchSet?.result?.weight !== void 0) {
+        if (isBw) {
+          this.weightInputVal = showWeightBox ? benchSet?.result?.weight || workingLogs[workingLogs.length - 1]?.result?.weight || 2.5 : 0;
+        } else if (benchSet?.result?.weight !== void 0) {
           this.weightInputVal = benchSet.result.weight;
         } else if (workingLogs.length > 0) {
           this.weightInputVal = workingLogs[workingLogs.length - 1].result?.weight || 20;
@@ -2418,6 +2622,14 @@ header.app-header {
           this.repsInputVal = 8;
         }
       }
+      if (this.durationInputVal === null) {
+        this.durationInputVal = benchSet?.result?.durationSeconds ?? parseDurationTargetSeconds(currentPlannedSet?.repsTarget) ?? workingLogs[workingLogs.length - 1]?.result?.durationSeconds ?? 30;
+      }
+      const setTimer = this.app.setTimer;
+      const setTimerSecs = setTimer?.active ? setTimer.remainingSeconds || 0 : this.durationInputVal || 30;
+      const timerMins = Math.floor(setTimerSecs / 60).toString().padStart(2, "0");
+      const timerRemSecs = (setTimerSecs % 60).toString().padStart(2, "0");
+      const setTimerDisplay = setTimer?.completed && !setTimer?.active ? "00:00 \u2014 Done!" : `${timerMins}:${timerRemSecs}`;
       return `
       <div style="display: flex; flex-direction: column; gap: 16px;">
         <!-- Top Orientation Bar -->
@@ -2458,7 +2670,7 @@ header.app-header {
               <span>Set ${workingLogs.length + 1}</span>
             </div>
             <div class="benchmark-card-val">
-              ${benchSet?.result?.weight ? `${benchSet.result.weight} ${unit} \xD7 ` : ""}${benchSet?.result?.reps || 0} reps
+              ${formatSetResult(benchSet?.result, unit)}
             </div>
             ${benchmark.exerciseNote ? `<div class="metadata-text" style="font-style: italic;">"${benchmark.exerciseNote}"</div>` : ""}
           </div>
@@ -2473,44 +2685,89 @@ header.app-header {
 
         <!-- Signature Focused Current-Set Panel -->
         <div class="active-set-panel">
-          <div class="set-panel-header">
+          <div class="set-panel-header" style="flex-wrap: wrap; gap: 8px;">
             <span class="set-panel-title">
               ${this.isWarmup ? "WARM-UP SET" : `SET ${currentSetNum} OF ${plannedSetsCount}`}
             </span>
-            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;">
-              <input type="checkbox" id="chk-is-warmup" ${this.isWarmup ? "checked" : ""}>
-              Warm-up
-            </label>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              ${isBw ? `
+                <button type="button" class="btn btn-quiet btn-sm" id="btn-toggle-added-weight">
+                  ${this.showAddedWeight ? "\u2715 Remove weight" : "+ Add weight"}
+                </button>
+              ` : ""}
+              <div class="set-mode-pills">
+                <button type="button" class="btn btn-sm ${this.setMode === "reps" ? "btn-primary" : "btn-secondary"}" id="btn-mode-reps">Reps</button>
+                <button type="button" class="btn btn-sm ${this.setMode === "timed" ? "btn-primary" : "btn-secondary"}" id="btn-mode-timed">Timed</button>
+              </div>
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;">
+                <input type="checkbox" id="chk-is-warmup" ${this.isWarmup ? "checked" : ""}>
+                Warm-up
+              </label>
+            </div>
           </div>
 
-          <!-- Numeric Entry: Weight & Reps -->
+          <!-- Numeric Entry: Weight & Reps/Duration -->
           <div class="numeric-entry-row">
-            <!-- Weight Box -->
-            <div class="numeric-entry-box" id="box-set-weight">
-              <span class="numeric-entry-label">Weight</span>
-              <div class="stepper-hybrid" id="stepper-weight">
-                <button type="button" class="stepper-btn stepper-btn-minus" id="btn-weight-minus" aria-label="Decrease weight">\u2212</button>
-                <div class="stepper-center">
-                  <input type="text" inputmode="decimal" pattern="[0-9]*.?[0-9]*" class="stepper-center-input" id="input-set-weight" value="${this.weightInputVal ?? ""}" aria-label="Weight">
-                  <span class="stepper-unit">${unit}</span>
+            ${showWeightBox ? `
+              <!-- Weight Box -->
+              <div class="numeric-entry-box" id="box-set-weight">
+                <span class="numeric-entry-label">${isBw ? "Added Weight" : "Weight"}</span>
+                <div class="stepper-hybrid" id="stepper-weight">
+                  <button type="button" class="stepper-btn stepper-btn-minus" id="btn-weight-minus" aria-label="Decrease weight">\u2212</button>
+                  <div class="stepper-center">
+                    <input type="text" inputmode="decimal" pattern="[0-9]*\\.?[0-9]*" class="stepper-center-input" id="input-set-weight" value="${this.weightInputVal ?? ""}" aria-label="Weight">
+                    <span class="stepper-unit">${unit}</span>
+                  </div>
+                  <button type="button" class="stepper-btn stepper-btn-plus" id="btn-weight-plus" aria-label="Increase weight">+</button>
                 </div>
-                <button type="button" class="stepper-btn stepper-btn-plus" id="btn-weight-plus" aria-label="Increase weight">+</button>
               </div>
-            </div>
+            ` : ""}
 
-            <!-- Reps Box -->
-            <div class="numeric-entry-box" id="box-set-reps">
-              <span class="numeric-entry-label">Reps</span>
-              <div class="stepper-hybrid" id="stepper-reps">
-                <button type="button" class="stepper-btn stepper-btn-minus" id="btn-reps-minus" aria-label="Decrease reps">\u2212</button>
-                <div class="stepper-center">
-                  <input type="text" inputmode="numeric" pattern="[0-9]*" class="stepper-center-input" id="input-set-reps" value="${this.repsInputVal ?? ""}" aria-label="Reps">
-                  <span class="stepper-unit">reps</span>
+            ${this.setMode === "timed" ? `
+              <!-- Duration Box -->
+              <div class="numeric-entry-box" id="box-set-duration">
+                <span class="numeric-entry-label">Duration</span>
+                <div class="stepper-hybrid" id="stepper-duration">
+                  <button type="button" class="stepper-btn stepper-btn-minus" id="btn-duration-minus" aria-label="Decrease duration">\u2212</button>
+                  <div class="stepper-center">
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" class="stepper-center-input" id="input-set-duration" value="${this.durationInputVal ?? ""}" aria-label="Duration">
+                    <span class="stepper-unit">sec</span>
+                  </div>
+                  <button type="button" class="stepper-btn stepper-btn-plus" id="btn-duration-plus" aria-label="Increase duration">+</button>
                 </div>
-                <button type="button" class="stepper-btn stepper-btn-plus" id="btn-reps-plus" aria-label="Increase reps">+</button>
+              </div>
+            ` : `
+              <!-- Reps Box -->
+              <div class="numeric-entry-box" id="box-set-reps">
+                <span class="numeric-entry-label">Reps</span>
+                <div class="stepper-hybrid" id="stepper-reps">
+                  <button type="button" class="stepper-btn stepper-btn-minus" id="btn-reps-minus" aria-label="Decrease reps">\u2212</button>
+                  <div class="stepper-center">
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" class="stepper-center-input" id="input-set-reps" value="${this.repsInputVal ?? ""}" aria-label="Reps">
+                    <span class="stepper-unit">reps</span>
+                  </div>
+                  <button type="button" class="stepper-btn stepper-btn-plus" id="btn-reps-plus" aria-label="Increase reps">+</button>
+                </div>
+              </div>
+            `}
+          </div>
+
+          ${this.setMode === "timed" ? `
+            <div class="set-timer-bar">
+              <div>
+                <div class="metadata-text" style="text-transform: uppercase; font-weight: 600;">Set Timer</div>
+                <div class="set-timer-display" id="set-timer-display">${setTimerDisplay}</div>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                ${setTimer?.active ? `
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-cancel-set-timer">Cancel</button>
+                ` : `
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-start-set-timer">\u23F1 Start timer</button>
+                  ${setTimer?.completed ? `<button type="button" class="btn btn-quiet btn-sm" id="btn-cancel-set-timer">Reset</button>` : ""}
+                `}
               </div>
             </div>
-          </div>
+          ` : ""}
 
           <div class="metadata-text" style="text-align: center; margin-bottom: 12px;">
             Suggested values \u2014 confirm what you performed
@@ -2535,7 +2792,7 @@ header.app-header {
               <div class="set-outline-row recorded ${this.lastLoggedSetId === log.id ? "just-recorded" : ""}">
                 <div class="set-outline-left">
                   <span style="color: var(--success); font-weight: 700;">\u2713</span>
-                  <span>Warm-up ${idx + 1}: ${log.result?.weight || 0} ${unit} \xD7 ${log.result?.reps || 0}</span>
+                  <span>Warm-up ${idx + 1}: ${formatSetResult(log.result, unit)}</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <span class="metadata-text">Recorded</span>
@@ -2549,7 +2806,7 @@ header.app-header {
               <div class="set-outline-row recorded ${this.lastLoggedSetId === log.id ? "just-recorded" : ""}">
                 <div class="set-outline-left">
                   <span style="color: var(--success); font-weight: 700;">\u2713</span>
-                  <span>Set ${idx + 1}: ${log.result?.weight || 0} ${unit} \xD7 ${log.result?.reps || 0}</span>
+                  <span>Set ${idx + 1}: ${formatSetResult(log.result, unit)}</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <span class="metadata-text">Recorded</span>
@@ -2596,6 +2853,19 @@ header.app-header {
     `;
     }
     renderRestPanel() {
+      if (this.app.restTimer?.completed) {
+        return `
+        <div class="rest-panel rest-panel-complete">
+          <div>
+            <div class="metadata-text" style="text-transform: uppercase; font-weight: 600;">Rest Timer</div>
+            <div class="rest-time-display">00:00 \u2014 Rest Complete!</div>
+          </div>
+          <div class="rest-controls">
+            <button class="btn btn-primary btn-sm" id="btn-rest-dismiss">Dismiss</button>
+          </div>
+        </div>
+      `;
+      }
       if (!this.app.restTimer?.active) return "";
       const rem = this.app.restTimer.remainingSeconds || 0;
       const mins = Math.floor(rem / 60).toString().padStart(2, "0");
@@ -2635,14 +2905,55 @@ header.app-header {
         });
         return;
       }
+      const isBw = isBodyweightExercise(exercise);
+      const showWeightBox = !isBw || Boolean(this.showAddedWeight);
       const weightInput = container.querySelector("#input-set-weight");
       const repsInput = container.querySelector("#input-set-reps");
+      const durationInput = container.querySelector("#input-set-duration");
       const warmupChk = container.querySelector("#chk-is-warmup");
       weightInput?.addEventListener("input", (e) => {
         this.weightInputVal = parseFloat(e.target.value) || 0;
       });
       repsInput?.addEventListener("input", (e) => {
         this.repsInputVal = parseInt(e.target.value, 10) || 0;
+      });
+      const updateIdleSetTimerDisplay = (secsVal) => {
+        if (this.app.setTimer?.active) return;
+        if (this.app.setTimer) {
+          this.app.setTimer.completed = false;
+        }
+        const displayEl = container.querySelector("#set-timer-display");
+        if (!displayEl) return;
+        const secs = Math.max(0, Number(secsVal) || 0);
+        const formatted = this.app.formatClock ? this.app.formatClock(secs) : `${Math.floor(secs / 60).toString().padStart(2, "0")}:${(secs % 60).toString().padStart(2, "0")}`;
+        displayEl.textContent = formatted;
+      };
+      durationInput?.addEventListener("input", (e) => {
+        this.durationInputVal = parseInt(e.target.value, 10) || 0;
+        updateIdleSetTimerDisplay(this.durationInputVal);
+      });
+      container.querySelector("#btn-mode-reps")?.addEventListener("click", () => {
+        this.setMode = "reps";
+        this.app.render?.();
+      });
+      container.querySelector("#btn-mode-timed")?.addEventListener("click", () => {
+        this.setMode = "timed";
+        this.app.render?.();
+      });
+      container.querySelector("#btn-toggle-added-weight")?.addEventListener("click", () => {
+        this.showAddedWeight = !this.showAddedWeight;
+        if (this.showAddedWeight && (!this.weightInputVal || this.weightInputVal <= 0)) {
+          this.weightInputVal = 2.5;
+        }
+        this.app.render?.();
+      });
+      container.querySelector("#btn-start-set-timer")?.addEventListener("click", () => {
+        hapticManager.unlockAudio?.();
+        const secs = parseInt(durationInput ? durationInput.value : this.durationInputVal, 10) || 30;
+        this.app.startSetTimer?.(secs);
+      });
+      container.querySelector("#btn-cancel-set-timer")?.addEventListener("click", () => {
+        this.app.endSetTimer?.();
       });
       warmupChk?.addEventListener("change", (e) => {
         this.isWarmup = e.target.checked;
@@ -2718,24 +3029,62 @@ header.app-header {
           onChanged: () => triggerHighlight("#box-set-reps")
         }));
       }
+      const durationMinus = container.querySelector("#btn-duration-minus");
+      const durationPlus = container.querySelector("#btn-duration-plus");
+      if (durationMinus && durationPlus && durationInput) {
+        this.steppers.push(bindStepper({
+          minusBtn: durationMinus,
+          plusBtn: durationPlus,
+          inputEl: durationInput,
+          getValue: () => {
+            if (durationInput && durationInput.value !== "") {
+              const parsed = parseInt(durationInput.value, 10);
+              if (!isNaN(parsed)) return parsed;
+            }
+            return this.durationInputVal ?? 30;
+          },
+          setValue: (v) => {
+            this.durationInputVal = v;
+            if (durationInput) durationInput.value = String(v);
+            updateIdleSetTimerDisplay(v);
+          },
+          step: 5,
+          min: 5,
+          max: 3600,
+          precision: 0,
+          onChanged: () => triggerHighlight("#box-set-duration")
+        }));
+      }
       container.querySelector("#btn-log-set")?.addEventListener("click", async () => {
+        hapticManager.unlockAudio?.();
         const weight = parseFloat(weightInput ? weightInput.value : this.weightInputVal) || 0;
         const reps = parseInt(repsInput ? repsInput.value : this.repsInputVal, 10) || 0;
+        const durationSeconds = parseInt(durationInput ? durationInput.value : this.durationInputVal, 10) || 0;
         const isWarmup = this.isWarmup;
         const allPosLogs = (session.setLogs || []).filter((l) => l.positionId === pos.id && !l.voidedAt);
         const setIndex = isWarmup ? allPosLogs.filter((l) => l.isWarmup).length + 1 : allPosLogs.filter((l) => !l.isWarmup).length + 1;
+        let result;
+        if (this.setMode === "timed") {
+          result = showWeightBox && weight > 0 ? { weight, durationSeconds } : { durationSeconds };
+        } else {
+          result = !isBw || showWeightBox && weight > 0 ? { weight, reps } : { reps };
+        }
         const saved = await this.app.logSet({
           positionId: pos.id,
           exerciseId: exercise.id,
           setIndex,
           isWarmup,
-          result: { weight, reps },
+          result,
           restSeconds: pos.restSeconds || 90
         });
         if (saved !== false) {
           hapticManager.triggerSetLogged();
           this.weightInputVal = weight;
-          this.repsInputVal = reps;
+          if (this.setMode === "timed") {
+            this.durationInputVal = durationSeconds;
+          } else {
+            this.repsInputVal = reps;
+          }
           this.isWarmup = false;
         }
       });
@@ -2774,10 +3123,20 @@ header.app-header {
       container.querySelector("#btn-rest-end")?.addEventListener("click", () => {
         this.app.endRestTimer();
       });
+      container.querySelector("#btn-rest-dismiss")?.addEventListener("click", () => {
+        if (this.app.dismissRestTimer) {
+          this.app.dismissRestTimer();
+        } else {
+          this.app.endRestTimer?.();
+        }
+      });
     }
     resetEntryInputs() {
       this.weightInputVal = null;
       this.repsInputVal = null;
+      this.durationInputVal = null;
+      this.setMode = null;
+      this.showAddedWeight = null;
       this.isWarmup = false;
     }
     async moveTo(index) {
@@ -2787,6 +3146,7 @@ header.app-header {
           progress: { currentPositionIndex: index }
         });
         this.currentPositionIndex = index;
+        this.app.endSetTimer?.();
         this.resetEntryInputs();
         if (typeof window !== "undefined" && typeof window.scrollTo === "function") {
           window.scrollTo({ top: 0, left: 0, behavior: "instant" });
@@ -2963,8 +3323,8 @@ header.app-header {
     }) : "Not yet";
   }
   var DataStatus = class {
-    constructor(app2) {
-      this.app = app2;
+    constructor(app) {
+      this.app = app;
       transport.connection.subscribe(() => this.update());
       window.addEventListener("online", () => this.update());
       window.addEventListener("offline", () => this.update());
@@ -3086,13 +3446,16 @@ header.app-header {
     return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
   var SettingsModal = class {
-    constructor(app2) {
-      this.app = app2;
+    constructor(app) {
+      this.app = app;
     }
     render() {
       const currentPref = themeManager.getPreference();
       const currentUnit = (typeof localStorage !== "undefined" && typeof localStorage.getItem === "function" ? localStorage.getItem("my_gym_units") : null) || "kg";
       const hapticsEnabled = hapticManager.isEnabled();
+      const soundEnabled = hapticManager.isSoundEnabled();
+      const notificationsEnabled = hapticManager.isNotificationsEnabled();
+      const notificationPerm = typeof Notification !== "undefined" ? Notification.permission : "unsupported";
       const spreadsheetUrl = spreadsheetLink(this.app.spreadsheetUrl);
       const shortcutUrl = spreadsheetLink(typeof localStorage !== "undefined" && typeof localStorage.getItem === "function" ? localStorage.getItem("my_gym_spreadsheet_url") : null);
       const remoteConfig = transport.getRemoteConfig();
@@ -3125,6 +3488,16 @@ header.app-header {
               </div>
             </div>
 
+            <!-- Timer Sound -->
+            <div>
+              <label class="form-label">Timer Sound</label>
+              <div class="segmented-control" id="sound-segmented">
+                <button class="segmented-option ${!soundEnabled ? "active" : ""}" data-sound-val="off">Off</button>
+                <button class="segmented-option ${soundEnabled ? "active" : ""}" data-sound-val="on">On</button>
+              </div>
+              <p class="metadata-text" style="margin-top: 6px;">Plays a chime when rest or timed sets finish (works on iOS and Android).</p>
+            </div>
+
             <!-- Haptic Feedback (Vibration) -->
             <div>
               <label class="form-label">Haptic Feedback (Vibration)</label>
@@ -3133,6 +3506,20 @@ header.app-header {
                 <button class="segmented-option ${hapticsEnabled ? "active" : ""}" data-haptics-val="on">On</button>
               </div>
               <p class="metadata-text" style="margin-top: 6px;">Vibrates briefly when logging a set, finishing a workout, or when rest ends.</p>
+            </div>
+
+            <!-- Background Timer Notifications & Test Alert -->
+            <div>
+              <label class="form-label">Background Timer Notifications</label>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-enable-notifications">
+                  ${notificationsEnabled && notificationPerm === "granted" ? "\u2705 Background Notifications On" : "\u{1F514} Enable Background Notifications"}
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-test-alert">\u{1F514} Test Timer Alert</button>
+              </div>
+              <p class="metadata-text" style="margin-top: 6px;">
+                ${notificationPerm === "denied" ? "Notification permission was blocked by the browser. Enable notifications in site settings to receive background alerts." : "Alerts you when a rest or set timer finishes while the screen is locked or app is backgrounded."}
+              </p>
             </div>
 
             <!-- Cloud Connection (Google Sheets) -->
@@ -3304,6 +3691,19 @@ header.app-header {
           this.app.render();
         });
       });
+      container.querySelectorAll("#sound-segmented .segmented-option").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const val = btn.dataset.soundVal;
+          const enabled = val === "on";
+          hapticManager.setSoundEnabled(enabled);
+          if (enabled) {
+            hapticManager.unlockAudio();
+            hapticManager.playTimerCompleteSound();
+          }
+          container.querySelectorAll("#sound-segmented .segmented-option").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+        });
+      });
       container.querySelectorAll("#haptics-segmented .segmented-option").forEach((btn) => {
         btn.addEventListener("click", () => {
           const val = btn.dataset.hapticsVal;
@@ -3315,6 +3715,24 @@ header.app-header {
           container.querySelectorAll("#haptics-segmented .segmented-option").forEach((b) => b.classList.remove("active"));
           btn.classList.add("active");
         });
+      });
+      container.querySelector("#btn-test-alert")?.addEventListener("click", () => {
+        hapticManager.unlockAudio();
+        hapticManager.triggerTimerAlert();
+      });
+      container.querySelector("#btn-enable-notifications")?.addEventListener("click", async () => {
+        if (typeof Notification !== "undefined" && typeof Notification.requestPermission === "function") {
+          try {
+            const perm = await Notification.requestPermission();
+            hapticManager.setNotificationsEnabled(perm === "granted");
+          } catch {
+            hapticManager.setNotificationsEnabled(false);
+          }
+        } else {
+          hapticManager.setNotificationsEnabled(false);
+        }
+        container.innerHTML = this.render();
+        this.attachEvents(container);
       });
       container.querySelector("#btn-export-backup")?.addEventListener("click", async () => {
         try {
@@ -5144,9 +5562,20 @@ header.app-header {
       this.offline = new OfflineWorkouts({ transport });
       this.offlineShellReady = false;
       this.localError = null;
+      this.wakeLock = null;
       this.restTimer = {
         active: false,
+        completed: false,
+        endsAt: null,
         remainingSeconds: 0,
+        intervalId: null
+      };
+      this.setTimer = {
+        active: false,
+        completed: false,
+        endsAt: null,
+        remainingSeconds: 0,
+        targetSeconds: 0,
         intervalId: null
       };
       this.views = {
@@ -5177,8 +5606,26 @@ header.app-header {
         this.render();
       }
       window.addEventListener("online", () => this.syncAndRefresh());
-      window.addEventListener("focus", () => this.uploadCompleted());
+      window.addEventListener("focus", () => {
+        this.handleForegroundResume();
+        this.uploadCompleted();
+      });
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          this.handleForegroundResume();
+        }
+      });
       this.retryTimer = setInterval(() => this.uploadCompleted(), 6e4);
+    }
+    handleForegroundResume() {
+      this.syncTimersWithClock();
+      if (!this.restTimer.active) {
+        this.cancelBackgroundTimerNotification("gym-rest-timer");
+      }
+      if (!this.setTimer.active) {
+        this.cancelBackgroundTimerNotification("gym-set-timer");
+      }
+      this.updateWakeLock();
     }
     setupPwaInstallBanner() {
       if (typeof window === "undefined" || typeof document === "undefined") return;
@@ -5322,7 +5769,7 @@ header.app-header {
           this.views.session.currentPositionIndex = this.activeSession?.progress?.currentPositionIndex || 0;
           this.views.session.resetEntryInputs();
           const restSeconds = Math.ceil(((this.activeSession?.progress?.restEndsAt || 0) - Date.now()) / 1e3);
-          if (restSeconds > 0) this.startRestTimer(restSeconds);
+          if (restSeconds > 0) this.startRestTimer(restSeconds, { persist: false });
         }
         this.loaded = true;
         if (this.activeSession?.plan?.positions) {
@@ -5413,6 +5860,7 @@ header.app-header {
     }
     setActiveTab(tab) {
       this.activeTab = tab;
+      this.updateWakeLock();
       if (typeof window !== "undefined" && typeof window.scrollTo === "function") {
         window.scrollTo({ top: 0, left: 0, behavior: "instant" });
       }
@@ -5522,6 +5970,7 @@ header.app-header {
           });
           this.setActiveSessionData(await this.api("getSessionDetails", { sessionId }));
           this.views.session.lastLoggedSetId = setLog.id;
+          this.endSetTimer();
           if (params.restSeconds) {
             this.startRestTimer(params.restSeconds);
           }
@@ -5563,61 +6012,227 @@ header.app-header {
         return;
       }
       this.endRestTimer();
+      this.endSetTimer();
       this.activeSession = null;
       this.setActiveTab("today");
       await this.refresh();
     }
-    startRestTimer(durationSeconds) {
-      this.endRestTimer();
-      this.restTimer.active = true;
-      this.restTimer.remainingSeconds = durationSeconds;
-      this.restTimer.intervalId = setInterval(() => {
-        this.restTimer.remainingSeconds--;
-        if (this.restTimer.remainingSeconds <= 0) {
-          this.endRestTimer();
-          hapticManager.triggerRestTimerComplete();
+    async updateWakeLock() {
+      if (typeof navigator === "undefined" || !navigator.wakeLock?.request) return;
+      const isVisible = typeof document === "undefined" || !document.visibilityState || document.visibilityState === "visible";
+      const shouldLock = this.activeTab === "session" && isVisible;
+      if (shouldLock) {
+        if (!this.wakeLock) {
+          try {
+            this.wakeLock = await navigator.wakeLock.request("screen");
+            this.wakeLock?.addEventListener?.("release", () => {
+              this.wakeLock = null;
+            });
+          } catch {
+          }
         }
-        this.updateRestDisplay();
-      }, 1e3);
+      } else if (this.wakeLock) {
+        try {
+          await this.wakeLock.release?.();
+        } catch {
+        }
+        this.wakeLock = null;
+      }
+    }
+    scheduleBackgroundTimerNotification(tag, endsAt, title, body) {
+      if (!hapticManager.isNotificationsEnabled()) return false;
+      if (typeof Notification !== "undefined" && Notification.permission !== "granted") return false;
+      if (typeof navigator === "undefined" || !navigator.serviceWorker) return false;
+      const msg = { type: "SCHEDULE_TIMER", tag, endsAt, title, body };
+      if (navigator.serviceWorker.controller?.postMessage) {
+        navigator.serviceWorker.controller.postMessage(msg);
+        return true;
+      }
+      navigator.serviceWorker.ready?.then((reg) => {
+        reg?.active?.postMessage?.(msg);
+      }).catch(() => {
+      });
+      return true;
+    }
+    cancelBackgroundTimerNotification(tag) {
+      if (typeof navigator === "undefined" || !navigator.serviceWorker) return false;
+      const msg = { type: "CANCEL_TIMER", tag };
+      if (navigator.serviceWorker.controller?.postMessage) {
+        navigator.serviceWorker.controller.postMessage(msg);
+        return true;
+      }
+      navigator.serviceWorker.ready?.then((reg) => {
+        reg?.active?.postMessage?.(msg);
+      }).catch(() => {
+      });
+      return true;
+    }
+    syncTimersWithClock() {
+      const now = Date.now();
+      let shouldTriggerAlert = false;
+      if (this.restTimer.active && this.restTimer.endsAt !== null) {
+        const remaining = Math.ceil((this.restTimer.endsAt - now) / 1e3);
+        if (remaining <= 0) {
+          this.endRestTimer({ completed: true });
+          shouldTriggerAlert = true;
+        } else {
+          this.restTimer.remainingSeconds = remaining;
+          this.updateRestDisplay();
+        }
+      }
+      if (this.setTimer.active && this.setTimer.endsAt !== null) {
+        const remaining = Math.ceil((this.setTimer.endsAt - now) / 1e3);
+        if (remaining <= 0) {
+          this.endSetTimer({ completed: true });
+          shouldTriggerAlert = true;
+        } else {
+          this.setTimer.remainingSeconds = remaining;
+          this.updateSetTimerDisplay();
+        }
+      }
+      if (shouldTriggerAlert) {
+        hapticManager.triggerTimerAlert();
+      }
+    }
+    startRestTimer(durationSeconds, { persist = true } = {}) {
+      this.endRestTimer({ completed: false, persist: false });
+      const endsAt = Date.now() + durationSeconds * 1e3;
+      this.restTimer.active = true;
+      this.restTimer.completed = false;
+      this.restTimer.endsAt = endsAt;
+      this.restTimer.remainingSeconds = durationSeconds;
+      this.scheduleBackgroundTimerNotification(
+        "gym-rest-timer",
+        endsAt,
+        "Rest Timer Complete",
+        "Time for your next set!"
+      );
+      this.restTimer.intervalId = setInterval(() => {
+        this.syncTimersWithClock();
+      }, 500);
+      this.updateRestDisplay();
+      if (persist && this.activeSession?.id) {
+        this.api("updateSessionProgress", {
+          sessionId: this.activeSession.id,
+          progress: { restEndsAt: endsAt }
+        }).catch((err) => console.warn("Could not persist rest timer start:", err));
+      }
     }
     adjustRestTimer(seconds) {
       if (!this.restTimer.active) return;
-      this.restTimer.remainingSeconds = Math.max(0, this.restTimer.remainingSeconds + seconds);
-      this.updateRestDisplay();
+      const baseEndsAt = this.restTimer.endsAt || Date.now() + this.restTimer.remainingSeconds * 1e3;
+      this.restTimer.endsAt = Math.max(Date.now(), baseEndsAt + seconds * 1e3);
+      this.syncTimersWithClock();
+      if (this.restTimer.active) {
+        this.scheduleBackgroundTimerNotification(
+          "gym-rest-timer",
+          this.restTimer.endsAt,
+          "Rest Timer Complete",
+          "Time for your next set!"
+        );
+      }
       if (this.activeSession?.id) {
-        const restEndsAt = this.restTimer.remainingSeconds > 0 ? Date.now() + this.restTimer.remainingSeconds * 1e3 : null;
+        const restEndsAt = this.restTimer.active ? this.restTimer.endsAt : null;
         this.api("updateSessionProgress", {
           sessionId: this.activeSession.id,
           progress: { restEndsAt }
         }).catch((err) => console.warn("Could not persist rest timer adjustment:", err));
       }
     }
-    endRestTimer() {
+    endRestTimer({ completed = false, persist = true } = {}) {
       if (this.restTimer.intervalId) {
         clearInterval(this.restTimer.intervalId);
         this.restTimer.intervalId = null;
       }
       const wasActive = this.restTimer.active;
       this.restTimer.active = false;
+      this.restTimer.completed = Boolean(completed);
+      this.restTimer.endsAt = null;
       this.restTimer.remainingSeconds = 0;
+      if (!completed || typeof document === "undefined" || document.visibilityState !== "hidden") {
+        this.cancelBackgroundTimerNotification("gym-rest-timer");
+      }
       this.updateRestDisplay();
-      if (wasActive && this.activeSession?.id) {
+      if (wasActive && persist && this.activeSession?.id) {
         this.api("updateSessionProgress", {
           sessionId: this.activeSession.id,
           progress: { restEndsAt: null }
         }).catch((err) => console.warn("Could not persist rest timer end:", err));
       }
     }
+    dismissRestTimer() {
+      this.restTimer.completed = false;
+      this.cancelBackgroundTimerNotification("gym-rest-timer");
+      this.updateRestDisplay();
+    }
     updateRestDisplay() {
+      if (typeof document === "undefined") return;
       const displayEl = document.querySelector(".rest-time-display");
       if (displayEl && this.restTimer.active) {
         const rem = this.restTimer.remainingSeconds;
         const mins = Math.floor(rem / 60).toString().padStart(2, "0");
         const secs = (rem % 60).toString().padStart(2, "0");
         displayEl.textContent = `${mins}:${secs}`;
+      } else if (this.restTimer.completed) {
+        if (this.activeTab === "session") {
+          this.render();
+        }
       } else if (!this.restTimer.active) {
         const panel = document.querySelector(".rest-panel");
         if (panel) panel.remove();
+      }
+    }
+    startSetTimer(durationSeconds) {
+      const secs = Math.max(1, Number(durationSeconds) || 30);
+      this.endSetTimer({ completed: false });
+      const endsAt = Date.now() + secs * 1e3;
+      this.setTimer.active = true;
+      this.setTimer.completed = false;
+      this.setTimer.endsAt = endsAt;
+      this.setTimer.remainingSeconds = secs;
+      this.setTimer.targetSeconds = secs;
+      this.scheduleBackgroundTimerNotification(
+        "gym-set-timer",
+        endsAt,
+        "Set Timer Complete",
+        "Target hold duration reached!"
+      );
+      this.setTimer.intervalId = setInterval(() => {
+        this.syncTimersWithClock();
+      }, 500);
+      this.updateSetTimerDisplay();
+      if (typeof document !== "undefined" && this.activeTab === "session") {
+        this.render();
+      }
+    }
+    endSetTimer({ completed = false } = {}) {
+      if (this.setTimer.intervalId) {
+        clearInterval(this.setTimer.intervalId);
+        this.setTimer.intervalId = null;
+      }
+      this.setTimer.active = false;
+      this.setTimer.completed = Boolean(completed);
+      this.setTimer.endsAt = null;
+      this.setTimer.remainingSeconds = 0;
+      if (!completed || typeof document === "undefined" || document.visibilityState !== "hidden") {
+        this.cancelBackgroundTimerNotification("gym-set-timer");
+      }
+      this.updateSetTimerDisplay();
+      if (typeof document !== "undefined" && this.activeTab === "session") {
+        this.render();
+      }
+    }
+    updateSetTimerDisplay() {
+      if (typeof document === "undefined") return;
+      const displayEl = document.querySelector("#set-timer-display");
+      if (!displayEl) return;
+      if (this.setTimer.active) {
+        const rem = this.setTimer.remainingSeconds;
+        const mins = Math.floor(rem / 60).toString().padStart(2, "0");
+        const secs = (rem % 60).toString().padStart(2, "0");
+        displayEl.textContent = `${mins}:${secs}`;
+      } else if (this.setTimer.completed) {
+        displayEl.textContent = "00:00 \u2014 Done!";
       }
     }
     openFinishModal() {
@@ -5672,6 +6287,7 @@ header.app-header {
           });
           hapticManager.triggerSessionFinished();
           this.endRestTimer();
+          this.endSetTimer();
           this.activeSession = null;
           close();
           await this.refresh();
@@ -5689,9 +6305,11 @@ header.app-header {
       this.views.settings.attachEvents(modalContainer);
     }
   };
-  var app = new GymApp();
-  window.app = app;
-  app.init();
+  if (typeof window !== "undefined" && typeof document !== "undefined") {
+    const app = new GymApp();
+    window.app = app;
+    app.init();
+  }
 })();
 
 </script>
